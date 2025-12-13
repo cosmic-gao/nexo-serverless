@@ -377,7 +377,14 @@ export async function runViteProject(
   installProcess.output.pipeTo(
     new WritableStream({
       write(data) {
-        onLog(`[pnpm] ${data}`)
+        // 清理 ANSI 转义码和特殊字符，避免乱码
+        const cleanData = data
+          .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '') // 移除 ANSI 转义码
+          .replace(/[\x00-\x09\x0B\x0C\x0E-\x1F]/g, '') // 移除控制字符
+          .trim()
+        if (cleanData) {
+          onLog(`[pnpm] ${cleanData}`)
+        }
       },
     })
   )
@@ -401,7 +408,14 @@ export async function runViteProject(
   devProcess.output.pipeTo(
     new WritableStream({
       write(data) {
-        onLog(`[vite] ${data}`)
+        // 清理 ANSI 转义码和特殊字符，避免乱码
+        const cleanData = data
+          .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '') // 移除 ANSI 转义码
+          .replace(/[\x00-\x09\x0B\x0C\x0E-\x1F]/g, '') // 移除控制字符
+          .trim()
+        if (cleanData) {
+          onLog(`[vite] ${cleanData}`)
+        }
       },
     })
   )

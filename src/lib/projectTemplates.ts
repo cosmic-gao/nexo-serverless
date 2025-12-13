@@ -119,6 +119,9 @@ export const reactTemplate: ProjectTemplate = {
           '@types/react': '^18.3.12',
           '@types/react-dom': '^18.3.1',
           '@vitejs/plugin-react': '^4.3.4',
+          'autoprefixer': '^10.4.20',
+          'postcss': '^8.4.49',
+          'tailwindcss': '^3.4.17',
           typescript: '^5.7.2',
           vite: '^6.0.3',
         },
@@ -133,6 +136,31 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
 })`,
+    },
+    {
+      path: 'tailwind.config.js',
+      language: 'javascript',
+      content: `/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}`,
+    },
+    {
+      path: 'postcss.config.js',
+      language: 'javascript',
+      content: `export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}`,
     },
     {
       path: 'tsconfig.json',
@@ -265,6 +293,9 @@ export const vueTemplate: ProjectTemplate = {
         },
         devDependencies: {
           '@vitejs/plugin-vue': '^5.2.1',
+          'autoprefixer': '^10.4.20',
+          'postcss': '^8.4.49',
+          'tailwindcss': '^3.4.17',
           typescript: '^5.7.2',
           vite: '^6.0.3',
           'vue-tsc': '^2.1.10',
@@ -280,6 +311,31 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
 })`,
+    },
+    {
+      path: 'tailwind.config.js',
+      language: 'javascript',
+      content: `/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{vue,js,ts,jsx,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}`,
+    },
+    {
+      path: 'postcss.config.js',
+      language: 'javascript',
+      content: `export default {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+}`,
     },
     {
       path: 'tsconfig.json',
