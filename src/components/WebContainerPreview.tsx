@@ -18,6 +18,7 @@ import {
   filesToFileSystemTree,
   getWebContainer
 } from '../lib/webcontainer'
+import ParticleArrayLoader from './ParticleArrayLoader'
 
 interface WebContainerPreviewProps {
   files: ProjectFile[]
@@ -225,6 +226,9 @@ export default function WebContainerPreview({
   }
 
   const isRunning = status.state === 'booting' || status.state === 'installing' || status.state === 'starting'
+
+  // 调试状态变化
+  console.log('WebContainerPreview status:', status.state, status.message, 'isRunning:', isRunning)
   const canStop = status.state === 'ready' && projectType !== 'html'
 
   return (
@@ -367,19 +371,12 @@ export default function WebContainerPreview({
           </div>
         )}
 
-        {/* 加载状态遮罩 */}
+        {/* 加载状态遮罩 - 3D 粒子阵列效果 */}
         {isRunning && (
-          <div className="absolute inset-0 bg-surface-900/90 flex items-center justify-center">
-            <div className="text-center">
-              <Loader2 className="w-12 h-12 text-nexo-400 animate-spin mx-auto mb-4" />
-              <p className="text-white font-medium mb-2">{status.message}</p>
-              <p className="text-surface-400 text-sm">
-                {status.state === 'booting' && '正在初始化 WebContainer 环境...'}
-                {status.state === 'installing' && '正在安装 npm 依赖，请稍候...'}
-                {status.state === 'starting' && '正在启动 Vite 开发服务器...'}
-              </p>
-            </div>
-          </div>
+          <ParticleArrayLoader 
+            status={status.state as 'booting' | 'installing' | 'starting'} 
+            message={status.message} 
+          />
         )}
 
         {/* 错误状态 */}
