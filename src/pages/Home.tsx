@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Zap, Globe, Shield, Clock, ArrowRight, Cpu, Server, Code2, Play } from 'lucide-react'
+import { Zap, Globe, Shield, Clock, ArrowRight, Cpu, Server, Code2, Play, Sparkles } from 'lucide-react'
 
 const features = [
   {
@@ -238,6 +238,81 @@ export default function Home() {
         </div>
       </section>
 
+      {/* AI Generator Section */}
+      <section className="max-w-7xl mx-auto px-6 py-20">
+        <div className="glass rounded-2xl p-8 md:p-12 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-nexo-500/10 rounded-full blur-3xl" />
+          
+          <div className="grid md:grid-cols-2 gap-12 items-center relative z-10">
+            <div>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-500/10 text-sm text-purple-300 mb-6">
+                <Sparkles className="w-4 h-4" />
+                全新功能
+              </div>
+              <h2 className="text-3xl font-bold text-white mb-4">
+                AI 代码生成器
+              </h2>
+              <p className="text-surface-400 mb-6">
+                使用 AI 自动生成前端代码，实时预览效果，一键发布到 Serverless 平台。
+                无需编写代码，只需描述您想要的页面。
+              </p>
+              <ul className="space-y-3 mb-8">
+                {[
+                  '自然语言描述，AI 自动生成代码',
+                  '实时预览，所见即所得',
+                  '一键发布到 Serverless 平台',
+                  '支持导出和分享',
+                ].map((item) => (
+                  <li key={item} className="flex items-center gap-3 text-surface-300">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link 
+                to="/ai-generator"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium rounded-xl transition-all duration-200 shadow-lg shadow-purple-500/30"
+              >
+                <Sparkles className="w-5 h-5" />
+                开始使用 AI 生成
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+            
+            <div className="relative">
+              <div className="glass rounded-xl overflow-hidden">
+                <div className="flex items-center gap-2 px-4 py-3 border-b border-surface-700">
+                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                  <div className="w-3 h-3 rounded-full bg-green-500" />
+                </div>
+                <div className="p-4 bg-surface-900/50">
+                  <div className="flex gap-4">
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-surface-700 flex items-center justify-center text-sm">👤</div>
+                        <div className="bg-nexo-500 rounded-2xl px-4 py-2 text-sm text-white">
+                          创建一个现代的登录页面
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center">
+                          <Sparkles className="w-4 h-4 text-purple-400" />
+                        </div>
+                        <div className="bg-surface-800 rounded-2xl px-4 py-2 text-sm text-surface-200">
+                          我已生成代码，请在预览区查看效果 ✨
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="max-w-7xl mx-auto px-6 py-20">
         <div className="text-center">
@@ -247,13 +322,22 @@ export default function Home() {
           <p className="text-surface-400 mb-8 max-w-2xl mx-auto">
             几分钟内部署你的第一个函数，体验毫秒级冷启动带来的极致性能
           </p>
-          <Link 
-            to="/functions/new"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-nexo-500 hover:bg-nexo-600 text-white font-medium rounded-xl transition-all duration-200 glow-green hover:glow-green-intense"
-          >
-            <Zap className="w-5 h-5" />
-            创建第一个函数
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link 
+              to="/functions/new"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-nexo-500 hover:bg-nexo-600 text-white font-medium rounded-xl transition-all duration-200 glow-green hover:glow-green-intense"
+            >
+              <Zap className="w-5 h-5" />
+              创建第一个函数
+            </Link>
+            <Link 
+              to="/ai-generator"
+              className="inline-flex items-center gap-2 px-8 py-4 glass text-white font-medium rounded-xl hover:bg-surface-800 transition-all duration-200"
+            >
+              <Sparkles className="w-5 h-5" />
+              用 AI 生成代码
+            </Link>
+          </div>
         </div>
       </section>
 

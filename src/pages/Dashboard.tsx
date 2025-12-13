@@ -4,9 +4,7 @@ import {
   Zap, 
   Activity, 
   Clock, 
-  CheckCircle2, 
-  XCircle, 
-  TrendingUp,
+  CheckCircle2,
   Code2,
   ArrowRight,
   RefreshCw

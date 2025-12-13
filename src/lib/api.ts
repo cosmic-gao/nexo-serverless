@@ -57,6 +57,18 @@ export interface InvokeResult {
   function_id?: string
 }
 
+export interface DeployPreviewRequest {
+  html: string
+  name?: string
+  route?: string
+}
+
+export interface DeployPreviewResult {
+  id: string
+  route: string
+  url: string
+}
+
 export interface ApiResponse<T> {
   success: boolean
   data?: T
@@ -146,6 +158,66 @@ class NexoAPI {
       method,
       body: body ? JSON.stringify(body) : undefined,
     })
+  }
+
+  // Deploy static HTML preview
+  async deployPreview(data: DeployPreviewRequest): Promise<ApiResponse<DeployPreviewResult>> {
+    const timestamp = Date.now()
+    const routePath = data.route || `/preview/${timestamp}`
+    const functionName = data.name || `ai-preview-${timestamp}`
+    
+    // 创建一个函数来托管静态 HTML
+    const functionCode = `// 静态 HTML 页面托管函数
+// 由 AI 代码生成器创建
+
+const htmlContent = ${JSON.stringify(data.html)};
+
+function handler(request, { env }) {
+  return new Response(htmlContent, {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+    },
+  });
+}`
+
+    const res = await this.createFunction({
+      name: functionName,
+      code: functionCode,
+      route: routePath,
+      methods: ['GET'],
+      env: {},
+      limits: {
+        max_execution_time_ms: 1000,
+        max_memory_mb: 32,
+        max_request_body_kb: 16,
+      },
+    })
+
+    if (res.success && res.data) {
+      return {
+        success: true,
+        data: {
+          id: res.data.id,
+          route: routePath,
+          url: `${this.baseUrl}/fn${routePath}`,
+        },
+      }
+    }
+
+    return {
+      success: false,
+      error: res.error || '部署失败',
+    }
+  }
+
+  // List deployed previews
+  async listPreviews(): Promise<ApiResponse<Function[]>> {
+    const res = await this.listFunctions()
+    if (res.success && res.data) {
+      const previews = res.data.filter(fn => fn.name.startsWith('ai-preview-'))
+      return { success: true, data: previews }
+    }
+    return res
   }
 }
 

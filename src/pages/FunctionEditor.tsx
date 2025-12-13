@@ -14,7 +14,7 @@ import {
   Check,
   AlertCircle
 } from 'lucide-react'
-import api, { Function, CreateFunctionRequest, InvokeResult } from '../lib/api'
+import api, { CreateFunctionRequest, InvokeResult } from '../lib/api'
 
 const DEFAULT_CODE = `// Nexo Serverless Function
 // 

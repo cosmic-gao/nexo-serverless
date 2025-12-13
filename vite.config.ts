@@ -7,6 +7,16 @@ export default defineConfig({
     alias: {
       '@': '/src'
     }
-  }
+  },
+  server: {
+    headers: {
+      // WebContainers 需要这些头来启用 SharedArrayBuffer
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Opener-Policy': 'same-origin',
+    },
+  },
+  optimizeDeps: {
+    include: ['@webcontainer/api'],
+  },
 })
 
