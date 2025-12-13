@@ -115,6 +115,45 @@ impl NexoRuntime {
         result: crate::isolate::ExecutionResult,
     ) -> FunctionResponse {
         if result.success {
+            // 检查是否是 Response 对象
+            if let Some(ref output) = result.output {
+                if output.get("__isResponse").and_then(|v| v.as_bool()) == Some(true) {
+                    // 这是一个 Response 对象，提取其字段
+                    let status = output.get("status")
+                        .and_then(|v| v.as_u64())
+                        .map(|v| v as u16)
+                        .unwrap_or(200);
+                    
+                    let mut headers: HashMap<String, String> = HashMap::new();
+                    if let Some(h) = output.get("headers").and_then(|v| v.as_object()) {
+                        for (k, v) in h {
+                            if let Some(val) = v.as_str() {
+                                headers.insert(k.clone(), val.to_string());
+                            }
+                        }
+                    }
+                    
+                    // 确保有 Content-Type
+                    if !headers.contains_key("Content-Type") && !headers.contains_key("content-type") {
+                        headers.insert("Content-Type".to_string(), "text/plain".to_string());
+                    }
+                    
+                    // 提取 body
+                    let body = output.get("body").cloned();
+                    
+                    return FunctionResponse {
+                        status,
+                        headers,
+                        body,
+                        execution_time_ms: result.execution_time_ms,
+                        memory_used_bytes: result.memory_used_bytes,
+                        function_id: function_id.to_string(),
+                        logs: result.logs,
+                    };
+                }
+            }
+            
+            // 普通响应
             FunctionResponse {
                 status: 200,
                 headers: [("Content-Type".to_string(), "application/json".to_string())]

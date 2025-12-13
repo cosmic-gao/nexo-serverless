@@ -135,6 +135,9 @@ impl NexoIsolate {
 
         // 注入 console 对象
         self.inject_console(scope, global)?;
+        
+        // 注入 Response 类
+        self.inject_response_class(scope, global)?;
 
         // 注入 __REQUEST__ 对象
         let request_key = v8::String::new(scope, "__REQUEST__").unwrap();
@@ -145,6 +148,44 @@ impl NexoIsolate {
         });
         global.set(scope, request_key.into(), request_val);
 
+        Ok(())
+    }
+    
+    /// 注入 Response 类（模拟 Web API Response）
+    fn inject_response_class(
+        &self,
+        scope: &mut v8::ContextScope<v8::HandleScope>,
+        global: v8::Local<v8::Object>,
+    ) -> Result<()> {
+        // 定义 Response 类作为 JavaScript 代码
+        let response_class_code = r#"
+            class Response {
+                constructor(body, options = {}) {
+                    this.body = body;
+                    this.status = options.status || 200;
+                    this.statusText = options.statusText || 'OK';
+                    this.headers = options.headers || {};
+                    this._isResponse = true;
+                }
+                
+                text() {
+                    return this.body;
+                }
+                
+                json() {
+                    return JSON.parse(this.body);
+                }
+            }
+            globalThis.Response = Response;
+        "#;
+        
+        let code = v8::String::new(scope, response_class_code).unwrap();
+        let script = v8::Script::compile(scope, code, None)
+            .ok_or_else(|| anyhow!("Failed to compile Response class"))?;
+        script.run(scope)
+            .ok_or_else(|| anyhow!("Failed to run Response class definition"))?;
+        
+        let _ = global; // 使用 global 避免警告
         Ok(())
     }
 
@@ -230,7 +271,7 @@ impl NexoIsolate {
         let wrapped_code = format!(r#"
             (function() {{
                 // 请求对象
-                const request = {{
+                var request = {{
                     url: __REQUEST__.url || '',
                     method: __REQUEST__.method || 'GET',
                     headers: __REQUEST__.headers || {{}},
@@ -240,19 +281,23 @@ impl NexoIsolate {
                     }}
                 }};
 
-                // 环境变量
-                const env = {{
+                // 环境变量对象
+                var envData = __REQUEST__.env || {{}};
+                var env = {{
                     get: function(key) {{ 
-                        return (__REQUEST__.env || {{}})[key]; 
+                        return envData[key]; 
                     }}
                 }};
+                
+                // 上下文对象（传递给 handler 的第二个参数）
+                var ctx = {{ env: env }};
 
                 // 用户代码
                 {user_code}
 
                 // 调用 handler
                 if (typeof handler === 'function') {{
-                    let result = handler(request, {{ env }});
+                    var result = handler(request, ctx);
                     // 如果是 Promise，尝试获取同步结果（对于简单的 async 函数）
                     if (result && typeof result.then === 'function') {{
                         // 无法在同步上下文中 await，返回提示
@@ -261,12 +306,32 @@ impl NexoIsolate {
                             hint: "Remove 'async' keyword from your handler function."
                         }});
                     }}
+                    // 处理 Response 对象
+                    if (result && result._isResponse) {{
+                        return JSON.stringify({{
+                            __isResponse: true,
+                            body: result.body,
+                            status: result.status,
+                            statusText: result.statusText,
+                            headers: result.headers
+                        }});
+                    }}
                     return JSON.stringify(result);
                 }} else if (typeof main === 'function') {{
-                    let result = main(request);
+                    var result = main(request);
                     if (result && typeof result.then === 'function') {{
                         return JSON.stringify({{ 
                             error: "Async functions are not fully supported. Please use synchronous handler."
+                        }});
+                    }}
+                    // 处理 Response 对象
+                    if (result && result._isResponse) {{
+                        return JSON.stringify({{
+                            __isResponse: true,
+                            body: result.body,
+                            status: result.status,
+                            statusText: result.statusText,
+                            headers: result.headers
                         }});
                     }}
                     return JSON.stringify(result);

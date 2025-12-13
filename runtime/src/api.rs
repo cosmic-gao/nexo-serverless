@@ -261,7 +261,7 @@ async fn invoke_function(
     })))
 }
 
-/// 通过路由调用函数
+/// 通过路由调用函数 - 直接返回函数响应内容（用于静态页面托管等）
 async fn invoke_by_route(
     State(state): State<Arc<AppState>>,
     Path(path): Path<String>,
@@ -269,7 +269,10 @@ async fn invoke_by_route(
     headers: HeaderMap,
     Query(params): Query<InvokeParams>,
     body: Option<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<ApiResponse<()>>)> {
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use axum::http::header;
+    
     let route = format!("/{}", path);
 
     let request = FunctionRequest {
@@ -286,16 +289,35 @@ async fn invoke_by_route(
     };
 
     match state.runtime.execute_by_route(&route, &method.to_string(), request).await {
-        Ok(response) => Ok(Json(serde_json::json!({
-            "success": true,
-            "data": {
-                "status": response.status,
-                "body": response.body,
-                "execution_time_ms": response.execution_time_ms,
-                "memory_used_bytes": response.memory_used_bytes,
-                "logs": response.logs,
-            }
-        }))),
-        Err(e) => Err((StatusCode::NOT_FOUND, ApiResponse::err(e))),
+        Ok(response) => {
+            // 获取函数返回的 Content-Type
+            let content_type = response.headers
+                .get("Content-Type")
+                .or_else(|| response.headers.get("content-type"))
+                .cloned()
+                .unwrap_or_else(|| "application/json".to_string());
+            
+            // 直接返回函数的响应体
+            let body_str = match &response.body {
+                Some(serde_json::Value::String(s)) => s.clone(),
+                Some(v) => v.to_string(),
+                None => String::new(),
+            };
+            
+            axum::response::Response::builder()
+                .status(response.status)
+                .header(header::CONTENT_TYPE, content_type)
+                .header("X-Execution-Time-Ms", response.execution_time_ms.to_string())
+                .header("X-Function-Id", response.function_id)
+                .body(axum::body::Body::from(body_str))
+                .unwrap()
+                .into_response()
+        }
+        Err(e) => {
+            (StatusCode::NOT_FOUND, Json(serde_json::json!({
+                "success": false,
+                "error": e
+            }))).into_response()
+        }
     }
 }

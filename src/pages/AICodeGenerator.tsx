@@ -18,7 +18,9 @@ import {
   User,
   Layers,
   Terminal,
-  Maximize2
+  Maximize2,
+  Copy,
+  CheckCircle2
 } from 'lucide-react'
 import api from '../lib/api'
 import { ProjectFile, ProjectType, getTemplate, allTemplates } from '../lib/projectTemplates'
@@ -1206,7 +1208,9 @@ export default function AICodeGenerator() {
   const [viewMode, setViewMode] = useState<ViewMode>('chat')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
+  const [publishStatus, setPublishStatus] = useState('')
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
+  const [urlCopied, setUrlCopied] = useState(false)
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -1282,25 +1286,71 @@ export default function AICodeGenerator() {
   const handlePublish = async () => {
     if (projectFiles.length === 0) return
     setIsPublishing(true)
+    setPublishStatus('正在准备发布...')
+    
     try {
-      let htmlContent = ''
       if (projectType === 'html') {
+        // HTML 项目直接发布
         const htmlFile = projectFiles.find(f => f.path === 'index.html')
         const cssFile = projectFiles.find(f => f.path === 'style.css')
         const jsFile = projectFiles.find(f => f.path === 'main.js')
-        if (htmlFile) {
-          htmlContent = htmlFile.content
-          if (cssFile) htmlContent = htmlContent.replace(/<link[^>]*href=["']style\.css["'][^>]*>/gi, `<style>${cssFile.content}</style>`)
-          if (jsFile) htmlContent = htmlContent.replace(/<script[^>]*src=["']main\.js["'][^>]*><\/script>/gi, `<script>${jsFile.content}</script>`)
+        
+        let htmlContent = htmlFile?.content || ''
+        if (cssFile) htmlContent = htmlContent.replace(/<link[^>]*href=["']style\.css["'][^>]*>/gi, `<style>${cssFile.content}</style>`)
+        if (jsFile) htmlContent = htmlContent.replace(/<script[^>]*src=["']main\.js["'][^>]*><\/script>/gi, `<script>${jsFile.content}</script>`)
+        
+        setPublishStatus('正在部署到 Serverless...')
+        const res = await api.deployPreview({ html: htmlContent })
+        if (res.success && res.data) {
+          setPublishedUrl(res.data.url)
+          setPublishStatus('')
+        } else {
+          alert('发布失败: ' + (res.error || '未知错误'))
+          setPublishStatus('')
         }
       } else {
-        htmlContent = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>预览</title><script src="https://cdn.tailwindcss.com"></script></head><body class="bg-slate-900 text-white min-h-screen flex items-center justify-center"><div class="text-center"><h1 class="text-3xl font-bold mb-4">${projectType === 'react' ? 'React' : 'Vue'} 项目</h1><p class="text-slate-400">请在 WebContainer 中运行以查看完整效果</p></div></body></html>`
+        // React/Vue 项目需要先构建
+        setPublishStatus('正在构建项目...')
+        
+        const { buildProject } = await import('../lib/webcontainer')
+        
+        const buildResult = await buildProject(
+          projectFiles,
+          projectType,
+          (status) => {
+            setPublishStatus(status.message)
+          },
+          (log) => {
+            console.log('[Build]', log)
+          }
+        )
+        
+        if (!buildResult.success) {
+          alert('构建失败: ' + (buildResult.error || '未知错误'))
+          setPublishStatus('')
+          return
+        }
+        
+        setPublishStatus(`构建完成，共 ${buildResult.files.length} 个文件，正在部署...`)
+        
+        // 使用构建产物部署
+        const res = await api.deploySite({ files: buildResult.files })
+        
+        if (res.success && res.data) {
+          setPublishedUrl(res.data.url)
+          setPublishStatus('')
+        } else {
+          alert('部署失败: ' + (res.error || '未知错误'))
+          setPublishStatus('')
+        }
       }
-      const res = await api.deployPreview({ html: htmlContent })
-      if (res.success && res.data) setPublishedUrl(res.data.url)
-      else alert('发布失败: ' + (res.error || '未知错误'))
-    } catch { alert('发布失败') }
-    finally { setIsPublishing(false) }
+    } catch (err) {
+      console.error('Publish error:', err)
+      alert('发布失败: ' + (err instanceof Error ? err.message : '未知错误'))
+      setPublishStatus('')
+    } finally {
+      setIsPublishing(false)
+    }
   }
 
   const clearProject = () => {
@@ -1393,9 +1443,10 @@ export default function AICodeGenerator() {
                   onClick={handlePublish}
                   disabled={isPublishing}
                   className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-nexo-500 to-emerald-500 text-white font-medium rounded-xl transition-all hover:shadow-lg hover:shadow-nexo-500/30 hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
+                  title={publishStatus || undefined}
                 >
                   {isPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
-                  {isPublishing ? '发布中...' : '发布'}
+                  {isPublishing ? (publishStatus || '发布中...') : '发布'}
                 </button>
               </>
             )}
@@ -1459,27 +1510,61 @@ export default function AICodeGenerator() {
             <div className="absolute inset-0 bg-gradient-to-r from-nexo-500/10 to-emerald-500/10" />
             <div className="absolute -right-20 -top-20 w-40 h-40 bg-nexo-500/20 rounded-full blur-3xl" />
             
-            <div className="relative flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-nexo-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-nexo-500/30">
-                  <Check className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <div className="text-white font-bold text-lg flex items-center gap-2">
-                    🎉 发布成功!
+            <div className="relative">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-nexo-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-nexo-500/30">
+                    <CheckCircle2 className="w-7 h-7 text-white" />
                   </div>
-                  <div className="text-surface-400 text-sm">您的页面已部署到 Serverless 平台</div>
+                  <div>
+                    <div className="text-white font-bold text-lg flex items-center gap-2">
+                      🎉 发布成功!
+                    </div>
+                    <div className="text-surface-400 text-sm">您的页面已部署到 Serverless 平台</div>
+                  </div>
                 </div>
+                <a
+                  href={publishedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-nexo-500 to-emerald-500 hover:from-nexo-600 hover:to-emerald-600 text-white font-medium rounded-xl transition-all hover:shadow-lg hover:shadow-nexo-500/30 hover:scale-[1.02]"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  访问页面
+                </a>
               </div>
-              <a
-                href={publishedUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-nexo-500 to-emerald-500 hover:from-nexo-600 hover:to-emerald-600 text-white font-medium rounded-xl transition-all hover:shadow-lg hover:shadow-nexo-500/30 hover:scale-[1.02]"
-              >
-                <ExternalLink className="w-4 h-4" />
-                访问页面
-              </a>
+              
+              {/* 可复制的 URL */}
+              <div className="flex items-center gap-3 bg-surface-900/60 rounded-xl p-3 border border-surface-700/50">
+                <div className="flex-1 flex items-center gap-2 overflow-hidden">
+                  <span className="text-surface-500 text-sm flex-shrink-0">访问链接:</span>
+                  <code className="text-nexo-400 text-sm font-mono truncate flex-1">{publishedUrl}</code>
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(publishedUrl)
+                    setUrlCopied(true)
+                    setTimeout(() => setUrlCopied(false), 2000)
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm font-medium ${
+                    urlCopied 
+                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                      : 'bg-surface-800 hover:bg-surface-700 text-surface-300 hover:text-white border border-surface-600'
+                  }`}
+                >
+                  {urlCopied ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      已复制
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      复制链接
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         )}

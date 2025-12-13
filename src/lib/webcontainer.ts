@@ -457,6 +457,196 @@ export async function updateFile(path: string, content: string): Promise<void> {
 }
 
 /**
+ * 构建结果
+ */
+export interface BuildResult {
+  success: boolean
+  files: { path: string; content: string }[]
+  error?: string
+}
+
+/**
+ * 递归读取目录内容
+ */
+async function readDirRecursive(
+  container: WebContainer,
+  dirPath: string,
+  basePath: string = ''
+): Promise<{ path: string; content: string }[]> {
+  const results: { path: string; content: string }[] = []
+  
+  try {
+    const entries = await container.fs.readdir(dirPath, { withFileTypes: true })
+    
+    for (const entry of entries) {
+      const fullPath = dirPath === '.' ? entry.name : `${dirPath}/${entry.name}`
+      const relativePath = basePath ? `${basePath}/${entry.name}` : entry.name
+      
+      if (entry.isDirectory()) {
+        const subFiles = await readDirRecursive(container, fullPath, relativePath)
+        results.push(...subFiles)
+      } else {
+        try {
+          const content = await container.fs.readFile(fullPath, 'utf-8')
+          results.push({ path: relativePath, content })
+        } catch {
+          // 跳过无法读取的文件（如二进制文件）
+        }
+      }
+    }
+  } catch {
+    // 目录不存在或无法读取
+  }
+  
+  return results
+}
+
+/**
+ * 在 WebContainer 中构建项目
+ */
+export async function buildProject(
+  files: ProjectFile[],
+  projectType: ProjectType,
+  onStatus: StatusCallback,
+  onLog: LogCallback,
+): Promise<BuildResult> {
+  if (projectType === 'html') {
+    // HTML 项目不需要构建
+    return {
+      success: true,
+      files: files.map(f => ({ path: f.path, content: f.content }))
+    }
+  }
+
+  onStatus({ state: 'booting', message: '正在启动 WebContainer...' })
+  onLog('[System] 启动 WebContainer 环境...')
+
+  const container = await getWebContainer()
+
+  onStatus({ state: 'installing', message: '正在写入项目文件...' })
+  onLog('[System] 写入项目文件...')
+
+  // 修改 vite.config.ts 以使用相对路径（用于 Serverless 部署）
+  const modifiedFiles = files.map(f => {
+    if (f.path === 'vite.config.ts') {
+      // 注入 base: './' 配置
+      let content = f.content
+      if (content.includes('defineConfig({')) {
+        content = content.replace(
+          'defineConfig({',
+          "defineConfig({\n  base: './',"
+        )
+      } else if (content.includes('defineConfig({\n')) {
+        content = content.replace(
+          'defineConfig({\n',
+          "defineConfig({\n  base: './',\n"
+        )
+      }
+      return { ...f, content }
+    }
+    return f
+  })
+
+  // 转换文件为文件系统树
+  const fileTree = filesToFileSystemTree(modifiedFiles)
+  await container.mount(fileTree)
+
+  onLog('[System] 项目文件写入完成')
+  onLog(`[System] 共 ${files.length} 个文件`)
+
+  onStatus({ state: 'installing', message: '正在安装依赖 (pnpm install)...' })
+  onLog('[pnpm] 安装依赖中...')
+
+  // 安装依赖 - 使用 pnpm
+  const installProcess = await container.spawn('pnpm', ['install', '--prefer-offline'])
+
+  // 监听安装输出
+  installProcess.output.pipeTo(
+    new WritableStream({
+      write(data) {
+        const cleanData = data
+          .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
+          .replace(/[\x00-\x09\x0B\x0C\x0E-\x1F]/g, '')
+          .trim()
+        if (cleanData) {
+          onLog(`[pnpm] ${cleanData}`)
+        }
+      },
+    })
+  )
+
+  const installExitCode = await installProcess.exit
+
+  if (installExitCode !== 0) {
+    onStatus({ state: 'error', message: '依赖安装失败' })
+    onLog(`[Error] pnpm install 失败，退出码: ${installExitCode}`)
+    return {
+      success: false,
+      files: [],
+      error: `pnpm install failed with exit code ${installExitCode}`
+    }
+  }
+
+  onLog('[pnpm] 依赖安装完成')
+  onStatus({ state: 'starting', message: '正在构建项目 (pnpm build)...' })
+  onLog('[vite] 开始构建...')
+
+  // 执行构建
+  const buildProcess = await container.spawn('pnpm', ['run', 'build'])
+
+  // 监听构建输出
+  buildProcess.output.pipeTo(
+    new WritableStream({
+      write(data) {
+        const cleanData = data
+          .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
+          .replace(/[\x00-\x09\x0B\x0C\x0E-\x1F]/g, '')
+          .trim()
+        if (cleanData) {
+          onLog(`[vite] ${cleanData}`)
+        }
+      },
+    })
+  )
+
+  const buildExitCode = await buildProcess.exit
+
+  if (buildExitCode !== 0) {
+    onStatus({ state: 'error', message: '构建失败' })
+    onLog(`[Error] pnpm build 失败，退出码: ${buildExitCode}`)
+    return {
+      success: false,
+      files: [],
+      error: `Build failed with exit code ${buildExitCode}`
+    }
+  }
+
+  onLog('[vite] 构建完成')
+  onStatus({ state: 'ready', message: '正在读取构建产物...' })
+  onLog('[System] 读取 dist 目录...')
+
+  // 读取构建产物
+  const distFiles = await readDirRecursive(container, 'dist')
+
+  if (distFiles.length === 0) {
+    onStatus({ state: 'error', message: '构建产物为空' })
+    return {
+      success: false,
+      files: [],
+      error: 'Build output is empty'
+    }
+  }
+
+  onLog(`[System] 读取到 ${distFiles.length} 个文件`)
+  onStatus({ state: 'ready', message: `构建完成，共 ${distFiles.length} 个文件` })
+
+  return {
+    success: true,
+    files: distFiles
+  }
+}
+
+/**
  * 销毁 WebContainer 实例
  */
 export async function teardownWebContainer(): Promise<void> {
