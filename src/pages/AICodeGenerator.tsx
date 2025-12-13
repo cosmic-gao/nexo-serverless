@@ -1383,61 +1383,78 @@ export default function AICodeGenerator() {
   }
 
   return (
-    <div className="pt-20 pb-8 min-h-screen relative overflow-hidden">
-      {/* 背景装饰 - 更加动感 */}
+    <div className="pt-16 pb-4 min-h-screen relative overflow-hidden">
+      {/* 背景装饰 - 赛博朋克风格 */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        {/* 主渐变光晕 */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-nexo-500/15 via-emerald-500/5 to-transparent rounded-full blur-3xl" />
-        <div className="absolute top-40 -left-20 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '8s' }} />
-        <div className="absolute bottom-20 -right-20 w-[600px] h-[600px] bg-cyan-500/8 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '10s' }} />
+        {/* 主渐变光晕 - 更强烈的色彩 */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[800px] bg-gradient-to-b from-nexo-500/20 via-purple-500/10 to-transparent rounded-full blur-3xl" />
+        <div className="absolute top-20 -left-40 w-[600px] h-[600px] bg-gradient-to-br from-purple-600/15 to-pink-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s' }} />
+        <div className="absolute bottom-0 -right-40 w-[800px] h-[800px] bg-gradient-to-tl from-cyan-500/15 to-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '8s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-emerald-500/5 to-nexo-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '10s' }} />
         
-        {/* 网格背景 */}
-        <div className="absolute inset-0 bg-grid opacity-30" />
+        {/* 网格背景 - 更明显 */}
+        <div className="absolute inset-0 bg-grid opacity-40" />
         
-        {/* 装饰性光点 */}
-        <div className="absolute top-32 left-[20%] w-2 h-2 bg-nexo-400 rounded-full animate-ping" style={{ animationDuration: '3s' }} />
-        <div className="absolute top-48 right-[25%] w-1.5 h-1.5 bg-purple-400 rounded-full animate-ping" style={{ animationDuration: '4s', animationDelay: '1s' }} />
-        <div className="absolute bottom-40 left-[30%] w-2 h-2 bg-cyan-400 rounded-full animate-ping" style={{ animationDuration: '5s', animationDelay: '2s' }} />
+        {/* 扫描线效果 */}
+        <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,255,136,0.02)_50%)] bg-[length:100%_4px] animate-scan" style={{ animationDuration: '8s' }} />
+        
+        {/* 装饰性光点 - 更多更炫 */}
+        <div className="absolute top-28 left-[15%] w-2 h-2 bg-nexo-400 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
+        <div className="absolute top-40 right-[20%] w-1.5 h-1.5 bg-purple-400 rounded-full animate-ping" style={{ animationDuration: '3s', animationDelay: '0.5s' }} />
+        <div className="absolute bottom-32 left-[25%] w-2 h-2 bg-cyan-400 rounded-full animate-ping" style={{ animationDuration: '2.5s', animationDelay: '1s' }} />
+        <div className="absolute top-60 left-[40%] w-1 h-1 bg-pink-400 rounded-full animate-ping" style={{ animationDuration: '4s', animationDelay: '1.5s' }} />
+        <div className="absolute bottom-48 right-[35%] w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" style={{ animationDuration: '3.5s', animationDelay: '2s' }} />
+        
+        {/* 流动的光线效果 */}
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-nexo-500/50 to-transparent animate-pulse" style={{ animationDuration: '3s' }} />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-500/50 to-transparent animate-pulse" style={{ animationDuration: '4s' }} />
       </div>
 
-      <div className="max-w-[1800px] mx-auto px-6 relative">
-        {/* Header - 更加现代的设计 */}
-        <div className="flex items-start justify-between mb-8">
-          <div className="flex items-start gap-5">
-            {/* 动态图标 */}
+      <div className="max-w-[1920px] mx-auto px-4 relative">
+        {/* Header - 紧凑的设计 */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-4">
+            {/* 动态图标 - 更紧凑 */}
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-nexo-500 to-emerald-500 rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity" />
-              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-nexo-500 to-emerald-600 flex items-center justify-center shadow-2xl shadow-nexo-500/30 group-hover:scale-105 transition-transform">
-                <Wand2 className="w-8 h-8 text-white" />
-                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center animate-bounce" style={{ animationDuration: '2s' }}>
-                  <Sparkles className="w-3 h-3 text-white" />
-              </div>
+              <div className="absolute inset-0 bg-gradient-to-br from-nexo-500 to-emerald-500 rounded-xl blur-md opacity-60 group-hover:opacity-80 transition-opacity" />
+              <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-nexo-500 to-emerald-600 flex items-center justify-center shadow-xl shadow-nexo-500/40 group-hover:scale-110 transition-transform">
+                <Wand2 className="w-6 h-6 text-white" />
+                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center animate-pulse shadow-lg shadow-purple-500/50">
+                  <Sparkles className="w-2.5 h-2.5 text-white" />
+                </div>
               </div>
             </div>
             
-              <div>
-              <div className="flex items-center gap-3 mb-1">
-                <h1 className="text-3xl font-bold text-white tracking-tight">AI 代码生成器</h1>
-                <span className="px-2.5 py-1 bg-gradient-to-r from-nexo-500/20 to-emerald-500/20 border border-nexo-500/30 rounded-full text-xs font-medium text-nexo-400">
-                  DEMO
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-white tracking-tight bg-gradient-to-r from-white to-white/80 bg-clip-text">AI 代码生成器</h1>
+                <span className="px-2 py-0.5 bg-gradient-to-r from-nexo-500/30 to-purple-500/30 border border-nexo-500/40 rounded-md text-[10px] font-bold text-nexo-400 uppercase tracking-wider animate-pulse">
+                  Live
                 </span>
               </div>
-              <p className="text-surface-400 flex items-center gap-2">
-                <Terminal className="w-4 h-4" />
+              <p className="text-surface-400 text-sm flex items-center gap-1.5">
+                <Terminal className="w-3.5 h-3.5" />
                 描述您的想法，AI 将为您生成完整的前端项目
               </p>
             </div>
           </div>
           
+          {/* 右侧快捷入口 */}
+          <div className="hidden lg:flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-800/50 rounded-lg border border-surface-700/50">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-xs text-surface-400">WebContainer 运行中</span>
+            </div>
           </div>
+        </div>
 
-        {/* 项目类型选择器 - 更精致的卡片设计 */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="flex items-center gap-2 text-surface-500 text-sm">
-            <Layers className="w-4 h-4" />
-            <span>项目类型</span>
+        {/* 项目类型选择器 - 紧凑的胶囊设计 */}
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-1.5 text-surface-500 text-xs">
+            <Layers className="w-3.5 h-3.5" />
+            <span>类型</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 p-1 bg-surface-900/80 rounded-xl border border-surface-700/50">
           {allTemplates.map(template => {
             const config = projectTypeConfig[template.type]
             const isActive = projectType === template.type
@@ -1451,124 +1468,118 @@ export default function AICodeGenerator() {
                     setActiveFile(template.entryFile)
                   }
                 }}
-                  className={`relative group flex items-center gap-3 px-5 py-3.5 rounded-xl transition-all duration-300 ${
+                className={`relative group flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
                   isActive 
-                      ? 'text-white shadow-xl' 
-                      : 'glass text-surface-300 hover:text-white hover:bg-surface-800/80'
-                  }`}
-                >
-                  {/* 活跃状态的渐变背景 */}
-                  {isActive && (
-                    <>
-                      <div className={`absolute inset-0 bg-gradient-to-r ${config.color} rounded-xl`} />
-                      <div className={`absolute inset-0 bg-gradient-to-r ${config.color} rounded-xl blur-lg opacity-50`} />
-                    </>
-                  )}
-                  
-                  <span className="relative text-2xl group-hover:scale-110 transition-transform">{config.icon}</span>
-                  <div className="relative text-left">
-                    <div className="font-semibold">{config.label}</div>
-                  <div className={`text-xs ${isActive ? 'text-white/70' : 'text-surface-500'}`}>{config.desc}</div>
-                </div>
-                  
-                  {/* 选中指示器 */}
-                  {isActive && (
-                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-1 bg-white/50 rounded-full" />
-                  )}
+                    ? 'text-white shadow-lg' 
+                    : 'text-surface-400 hover:text-white hover:bg-surface-800/60'
+                }`}
+              >
+                {/* 活跃状态的渐变背景 */}
+                {isActive && (
+                  <>
+                    <div className={`absolute inset-0 bg-gradient-to-r ${config.color} rounded-lg`} />
+                    <div className={`absolute inset-0 bg-gradient-to-r ${config.color} rounded-lg blur-md opacity-60`} />
+                  </>
+                )}
+                
+                <span className="relative text-lg group-hover:scale-110 transition-transform">{config.icon}</span>
+                <span className="relative font-medium text-sm">{config.label}</span>
               </button>
             )
           })}
           </div>
+          
+          {/* 分隔线 */}
+          <div className="h-6 w-px bg-surface-700/50" />
+          
+          {/* 快速模板按钮 */}
+          <div className="hidden md:flex items-center gap-2">
+            {quickPrompts.slice(0, 3).map((item) => (
+              <button
+                key={item.label}
+                onClick={() => {
+                  setInputValue(item.prompt)
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-800/50 hover:bg-surface-700/60 border border-surface-700/50 hover:border-surface-600 rounded-lg text-sm text-surface-400 hover:text-white transition-all group"
+              >
+                <span className="group-hover:scale-110 transition-transform">{item.icon}</span>
+                <span className="hidden xl:inline">{item.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* 发布成功提示 - 更醒目的设计 */}
+        {/* 发布成功提示 - 紧凑但醒目 */}
         {publishedUrl && (
-          <div className="relative overflow-hidden glass rounded-2xl p-5 mb-6 border border-nexo-500/40 animate-fade-in">
+          <div className="relative overflow-hidden glass rounded-xl p-4 mb-4 border border-nexo-500/50 animate-fade-in">
             {/* 背景光效 */}
-            <div className="absolute inset-0 bg-gradient-to-r from-nexo-500/10 to-emerald-500/10" />
-            <div className="absolute -right-20 -top-20 w-40 h-40 bg-nexo-500/20 rounded-full blur-3xl" />
+            <div className="absolute inset-0 bg-gradient-to-r from-nexo-500/15 to-emerald-500/15" />
+            <div className="absolute -right-10 -top-10 w-32 h-32 bg-nexo-500/30 rounded-full blur-2xl" />
             
-            <div className="relative">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-nexo-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-nexo-500/30">
-                    <CheckCircle2 className="w-7 h-7 text-white" />
-                  </div>
-                  <div>
-                    <div className="text-white font-bold text-lg flex items-center gap-2">
-                      🎉 发布成功!
-                    </div>
-                    <div className="text-surface-400 text-sm">您的页面已部署到 Serverless 平台</div>
-                  </div>
-                </div>
-                <a
-                  href={publishedUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-nexo-500 to-emerald-500 hover:from-nexo-600 hover:to-emerald-600 text-white font-medium rounded-xl transition-all hover:shadow-lg hover:shadow-nexo-500/30 hover:scale-[1.02]"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  访问页面
-                </a>
+            <div className="relative flex items-center gap-4">
+              <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-nexo-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-nexo-500/40 flex-shrink-0">
+                <CheckCircle2 className="w-6 h-6 text-white" />
               </div>
               
-              {/* 可复制的 URL */}
-              <div className="flex items-center gap-3 bg-surface-900/60 rounded-xl p-3 border border-surface-700/50">
-                <div className="flex-1 flex items-center gap-2 overflow-hidden">
-                  <span className="text-surface-500 text-sm flex-shrink-0">访问链接:</span>
-                  <code className="text-nexo-400 text-sm font-mono truncate flex-1">{publishedUrl}</code>
-                </div>
+              <div className="flex-1 min-w-0">
+                    <div className="text-white font-bold flex items-center gap-2">
+                      🎉 发布成功!
+                    </div>
+                <code className="text-nexo-400 text-xs font-mono truncate max-w-[300px]">{publishedUrl}</code>
+              </div>
+              
+              <div className="flex items-center gap-2 ml-auto flex-shrink-0">
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(publishedUrl)
                     setUrlCopied(true)
                     setTimeout(() => setUrlCopied(false), 2000)
                   }}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm font-medium ${
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all text-sm font-medium ${
                     urlCopied 
                       ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
                       : 'bg-surface-800 hover:bg-surface-700 text-surface-300 hover:text-white border border-surface-600'
                   }`}
                 >
-                  {urlCopied ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      已复制
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-4 h-4" />
-                      复制链接
-                    </>
-                  )}
+                  {urlCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  <span className="hidden sm:inline">{urlCopied ? '已复制' : '复制'}</span>
                 </button>
+                <a
+                  href={publishedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-nexo-500 to-emerald-500 hover:from-nexo-600 hover:to-emerald-600 text-white font-medium rounded-lg transition-all hover:shadow-lg hover:shadow-nexo-500/30 text-sm"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  访问
+                </a>
               </div>
             </div>
           </div>
         )}
 
-        {/* 主内容区域 - 优化布局比例 */}
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-          {/* 左侧面板 - AI 对话 (占 2 列) */}
-          <div className="xl:col-span-2 glass rounded-2xl overflow-hidden flex flex-col h-[calc(100vh-300px)] min-h-[500px] shadow-2xl shadow-black/20">
-            {/* 标题栏 */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-surface-700/50 bg-surface-900/50">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-green-500/80" />
+        {/* 主内容区域 - 预览区域更大 */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* 左侧面板 - AI 对话 (占 4 列) */}
+          <div className="lg:col-span-4 xl:col-span-3 glass rounded-xl overflow-hidden flex flex-col h-[calc(100vh-200px)] min-h-[600px] shadow-2xl shadow-black/30 border border-surface-700/30">
+            {/* 标题栏 - 更紧凑 */}
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-surface-700/50 bg-surface-900/70">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
                 </div>
-                <div className="h-4 w-px bg-surface-700" />
-                <MessageSquare className="w-4 h-4 text-surface-400" />
-                <span className="text-sm text-surface-300 font-medium">AI 对话</span>
+                <div className="h-3 w-px bg-surface-700 mx-1" />
+                <MessageSquare className="w-3.5 h-3.5 text-nexo-400" />
+                <span className="text-xs text-surface-300 font-medium">AI 助手</span>
               </div>
               <button
                 onClick={clearProject}
-                className="p-2 hover:bg-surface-700/80 rounded-lg transition-colors text-surface-400 hover:text-red-400 group"
+                className="p-1.5 hover:bg-surface-700/80 rounded-md transition-colors text-surface-400 hover:text-red-400 group"
                 title="清空项目"
               >
-                <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                <Trash2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
               </button>
             </div>
 
@@ -1733,40 +1744,40 @@ export default function AICodeGenerator() {
             </div>
           </div>
 
-          {/* 右侧面板 - 预览 & 代码 (占 3 列) */}
-          <div className="xl:col-span-3 glass rounded-2xl overflow-hidden flex flex-col h-[calc(100vh-300px)] min-h-[500px] shadow-2xl shadow-black/20">
-            {/* 标签栏 */}
-            <div className="flex items-center border-b border-surface-700/50 bg-surface-900/50">
-              <div className="flex items-center gap-1.5 px-4">
-                <div className="w-3 h-3 rounded-full bg-red-500/80" />
-                <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-                <div className="w-3 h-3 rounded-full bg-green-500/80" />
+          {/* 右侧面板 - 预览 & 代码 (占 8-9 列，更大的预览区) */}
+          <div className="lg:col-span-8 xl:col-span-9 glass rounded-xl overflow-hidden flex flex-col h-[calc(100vh-200px)] min-h-[600px] shadow-2xl shadow-black/30 border border-surface-700/30">
+            {/* 标签栏 - 更紧凑 */}
+            <div className="flex items-center border-b border-surface-700/50 bg-surface-900/70">
+              <div className="flex items-center gap-1 px-3">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
+                <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
               </div>
-              <div className="h-4 w-px bg-surface-700 mr-2" />
+              <div className="h-3 w-px bg-surface-700 mx-2" />
               
               {/* Tab 切换按钮 */}
               <button
                 onClick={() => setRightPanelTab('preview')}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all relative ${
+                className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-all relative ${
                   rightPanelTab === 'preview' ? 'text-white' : 'text-surface-400 hover:text-white hover:bg-surface-800/50'
                 }`}
               >
-                <Layers className="w-4 h-4" />
-                预览
+                <Layers className="w-3.5 h-3.5" />
+                <span>预览</span>
                 {rightPanelTab === 'preview' && (
                   <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-nexo-500 to-emerald-500 rounded-full" />
                 )}
               </button>
               <button
                 onClick={() => setRightPanelTab('code')}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all relative ${
+                className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-all relative ${
                   rightPanelTab === 'code' ? 'text-white' : 'text-surface-400 hover:text-white hover:bg-surface-800/50'
                 }`}
               >
-                <Code className="w-4 h-4" />
-                代码
+                <Code className="w-3.5 h-3.5" />
+                <span>代码</span>
                 {projectFiles.length > 0 && (
-                  <span className={`px-2 py-0.5 text-xs rounded-full ${rightPanelTab === 'code' ? 'bg-nexo-500/20 text-nexo-400' : 'bg-surface-700 text-surface-400'}`}>
+                  <span className={`px-1.5 py-0.5 text-xs rounded-md ml-1 ${rightPanelTab === 'code' ? 'bg-nexo-500/20 text-nexo-400' : 'bg-surface-700 text-surface-400'}`}>
                     {projectFiles.length}
                   </span>
                 )}
@@ -1779,7 +1790,7 @@ export default function AICodeGenerator() {
               
               {/* 项目类型标签 */}
               {projectFiles.length > 0 && (
-                <span className={`px-2.5 py-1 ${projectTypeConfig[projectType].bgGlow} text-xs rounded-full font-medium flex items-center gap-1.5 mr-2`}>
+                <span className={`px-2 py-1 ${projectTypeConfig[projectType].bgGlow} text-xs rounded-md font-medium flex items-center gap-1 mr-2`}>
                   <span>{projectTypeConfig[projectType].icon}</span>
                   <span className="text-white/90">{projectTypeConfig[projectType].label}</span>
                 </span>
@@ -1789,7 +1800,7 @@ export default function AICodeGenerator() {
               {projectFiles.length > 0 && rightPanelTab === 'preview' && (
                 <button
                   onClick={() => setIsFullscreen(true)}
-                  className="p-2 mr-3 hover:bg-surface-700/80 rounded-lg transition-colors text-surface-400 hover:text-white group"
+                  className="p-1.5 mr-2 hover:bg-surface-700/80 rounded-md transition-colors text-surface-400 hover:text-white group"
                   title="全屏预览"
                 >
                   <Maximize2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
