@@ -9,7 +9,6 @@ import {
   ExternalLink,
   Trash2,
   Download,
-  FolderOpen,
   Wand2,
   Code,
   Palette,
@@ -1187,7 +1186,7 @@ const features = [{ icon: '🍃', title: 'Vue 3', desc: '组合式 API' }, { ico
   return files.map(f => f.path === 'src/App.vue' ? { ...f, content: componentCode } : f)
 }
 
-type ViewMode = 'chat' | 'files'
+type RightPanelTab = 'preview' | 'code'
 
 // 项目类型图标和颜色
 const projectTypeConfig = {
@@ -1205,7 +1204,7 @@ export default function AICodeGenerator() {
   const [projectType, setProjectType] = useState<ProjectType>('html')
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([])
   const [activeFile, setActiveFile] = useState<string | null>(null)
-  const [viewMode, setViewMode] = useState<ViewMode>('chat')
+  const [rightPanelTab, setRightPanelTab] = useState<RightPanelTab>('preview')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
   const [publishStatus, setPublishStatus] = useState('')
@@ -1289,8 +1288,10 @@ export default function AICodeGenerator() {
     setPublishStatus('正在准备发布...')
     
     try {
+      let filesToDeploy: { path: string; content: string }[] = []
+      
       if (projectType === 'html') {
-        // HTML 项目直接发布
+        // HTML 项目：合并文件后发布
         const htmlFile = projectFiles.find(f => f.path === 'index.html')
         const cssFile = projectFiles.find(f => f.path === 'style.css')
         const jsFile = projectFiles.find(f => f.path === 'main.js')
@@ -1299,15 +1300,7 @@ export default function AICodeGenerator() {
         if (cssFile) htmlContent = htmlContent.replace(/<link[^>]*href=["']style\.css["'][^>]*>/gi, `<style>${cssFile.content}</style>`)
         if (jsFile) htmlContent = htmlContent.replace(/<script[^>]*src=["']main\.js["'][^>]*><\/script>/gi, `<script>${jsFile.content}</script>`)
         
-        setPublishStatus('正在部署到 Serverless...')
-        const res = await api.deployPreview({ html: htmlContent })
-        if (res.success && res.data) {
-          setPublishedUrl(res.data.url)
-          setPublishStatus('')
-        } else {
-          alert('发布失败: ' + (res.error || '未知错误'))
-          setPublishStatus('')
-        }
+        filesToDeploy = [{ path: 'index.html', content: htmlContent }]
       } else {
         // React/Vue 项目需要先构建
         setPublishStatus('正在构建项目...')
@@ -1331,18 +1324,26 @@ export default function AICodeGenerator() {
           return
         }
         
-        setPublishStatus(`构建完成，共 ${buildResult.files.length} 个文件，正在部署...`)
-        
-        // 使用构建产物部署
-        const res = await api.deploySite({ files: buildResult.files })
-        
-        if (res.success && res.data) {
-          setPublishedUrl(res.data.url)
-          setPublishStatus('')
-        } else {
-          alert('部署失败: ' + (res.error || '未知错误'))
-          setPublishStatus('')
-        }
+        filesToDeploy = buildResult.files
+        setPublishStatus(`构建完成，共 ${filesToDeploy.length} 个文件，正在部署...`)
+      }
+      
+      // 使用静态站点 API 部署
+      console.log('[Publish] 正在部署站点，文件数:', filesToDeploy.length)
+      const res = await api.deploySite({ 
+        files: filesToDeploy,
+        project_type: projectType,
+      })
+      console.log('[Publish] 部署响应:', res)
+      
+      if (res.success && res.data) {
+        console.log('[Publish] 部署成功:', res.data.url)
+        setPublishedUrl(res.data.url)
+        setPublishStatus('')
+      } else {
+        console.error('[Publish] 部署失败:', res.error)
+        alert('部署失败: ' + (res.error || '未知错误'))
+        setPublishStatus('')
       }
     } catch (err) {
       console.error('Publish error:', err)
@@ -1358,7 +1359,7 @@ export default function AICodeGenerator() {
     setProjectFiles([])
     setActiveFile(null)
     setPublishedUrl(null)
-    setViewMode('chat')
+    setRightPanelTab('preview')
   }
 
   const quickPrompts = [
@@ -1428,30 +1429,7 @@ export default function AICodeGenerator() {
             </div>
           </div>
           
-          {/* 操作按钮组 */}
-          <div className="flex items-center gap-3">
-            {projectFiles.length > 0 && (
-              <>
-                <button
-                  onClick={downloadProject}
-                  className="flex items-center gap-2 px-4 py-2.5 glass rounded-xl text-surface-300 hover:text-white hover:bg-surface-800/80 transition-all group"
-                >
-                  <Download className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                  <span className="hidden sm:inline">下载</span>
-                </button>
-                <button
-                  onClick={handlePublish}
-                  disabled={isPublishing}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-nexo-500 to-emerald-500 text-white font-medium rounded-xl transition-all hover:shadow-lg hover:shadow-nexo-500/30 hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
-                  title={publishStatus || undefined}
-                >
-                  {isPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
-                  {isPublishing ? (publishStatus || '发布中...') : '发布'}
-                </button>
-              </>
-            )}
           </div>
-        </div>
 
         {/* 项目类型选择器 - 更精致的卡片设计 */}
         <div className="flex items-center gap-4 mb-6">
@@ -1569,45 +1547,25 @@ export default function AICodeGenerator() {
           </div>
         )}
 
-        {/* 主内容区域 - 优化布局和阴影 */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {/* 左侧面板 - 对话 & 文件 */}
-          <div className="glass rounded-2xl overflow-hidden flex flex-col h-[calc(100vh-300px)] min-h-[500px] shadow-2xl shadow-black/20">
-            {/* 标签栏 - 更精致的设计 */}
-            <div className="flex items-center border-b border-surface-700/50 bg-surface-900/50">
-              <button
-                onClick={() => setViewMode('chat')}
-                className={`flex items-center gap-2.5 px-6 py-4 text-sm font-medium transition-all relative ${
-                  viewMode === 'chat' ? 'text-white' : 'text-surface-400 hover:text-white hover:bg-surface-800/50'
-                }`}
-              >
-                <MessageSquare className="w-4 h-4" />
-                AI 对话
-                {viewMode === 'chat' && (
-                  <div className="absolute bottom-0 left-4 right-4 h-0.5 bg-gradient-to-r from-nexo-500 to-emerald-500 rounded-full" />
-                )}
-              </button>
-              <button
-                onClick={() => setViewMode('files')}
-                className={`flex items-center gap-2.5 px-6 py-4 text-sm font-medium transition-all relative ${
-                  viewMode === 'files' ? 'text-white' : 'text-surface-400 hover:text-white hover:bg-surface-800/50'
-                }`}
-              >
-                <FolderOpen className="w-4 h-4" />
-                文件编辑
-                {projectFiles.length > 0 && (
-                  <span className={`px-2 py-0.5 text-xs rounded-full ${viewMode === 'files' ? 'bg-nexo-500/20 text-nexo-400' : 'bg-surface-700 text-surface-400'}`}>
-                    {projectFiles.length}
-                  </span>
-                )}
-                {viewMode === 'files' && (
-                  <div className="absolute bottom-0 left-4 right-4 h-0.5 bg-gradient-to-r from-nexo-500 to-emerald-500 rounded-full" />
-                )}
-              </button>
-              <div className="flex-1" />
+        {/* 主内容区域 - 优化布局比例 */}
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+          {/* 左侧面板 - AI 对话 (占 2 列) */}
+          <div className="xl:col-span-2 glass rounded-2xl overflow-hidden flex flex-col h-[calc(100vh-300px)] min-h-[500px] shadow-2xl shadow-black/20">
+            {/* 标题栏 */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-surface-700/50 bg-surface-900/50">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                  <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                  <div className="w-3 h-3 rounded-full bg-green-500/80" />
+                </div>
+                <div className="h-4 w-px bg-surface-700" />
+                <MessageSquare className="w-4 h-4 text-surface-400" />
+                <span className="text-sm text-surface-300 font-medium">AI 对话</span>
+              </div>
               <button
                 onClick={clearProject}
-                className="p-2.5 mr-3 hover:bg-surface-700/80 rounded-lg transition-colors text-surface-400 hover:text-red-400 group"
+                className="p-2 hover:bg-surface-700/80 rounded-lg transition-colors text-surface-400 hover:text-red-400 group"
                 title="清空项目"
               >
                 <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
@@ -1616,8 +1574,7 @@ export default function AICodeGenerator() {
 
             {/* 内容区 */}
             <div className="flex-1 overflow-hidden">
-              {viewMode === 'chat' ? (
-                <div className="flex flex-col h-full">
+              <div className="flex flex-col h-full">
                   {/* 消息列表 */}
                   <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 space-y-5">
                     {messages.length === 0 ? (
@@ -1719,7 +1676,35 @@ export default function AICodeGenerator() {
                   </div>
 
                   {/* 输入区 - 更精致的设计 */}
-                  <div className="p-5 border-t border-surface-700/50 bg-surface-900/50">
+                  <div className="p-4 border-t border-surface-700/50 bg-surface-900/50">
+                    {/* 快捷操作栏 - 类似 Teams 风格 */}
+                    {projectFiles.length > 0 && (
+                      <div className="flex items-center gap-2 mb-3 pb-3 border-b border-surface-700/30">
+                        <button
+                          onClick={handlePublish}
+                          disabled={isPublishing}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-nexo-500/20 to-emerald-500/20 hover:from-nexo-500/30 hover:to-emerald-500/30 text-nexo-400 hover:text-nexo-300 text-sm rounded-lg transition-all border border-nexo-500/30 hover:border-nexo-500/50 disabled:opacity-50"
+                          title={publishStatus || '发布到线上'}
+                        >
+                          {isPublishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Rocket className="w-3.5 h-3.5" />}
+                          <span>{isPublishing ? '发布中...' : '发布'}</span>
+                        </button>
+                        <button
+                          onClick={downloadProject}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-surface-800/60 hover:bg-surface-700/80 text-surface-400 hover:text-white text-sm rounded-lg transition-all border border-surface-700/50 hover:border-surface-600"
+                          title="下载项目文件"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>下载</span>
+                        </button>
+                        <div className="flex-1" />
+                        <span className="text-xs text-surface-500">
+                          {projectFiles.length} 个文件
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* 输入框 */}
                     <div className="flex gap-3">
                       <div className="flex-1 relative group">
                         <textarea
@@ -1728,23 +1713,99 @@ export default function AICodeGenerator() {
                           onKeyDown={handleKeyDown}
                           placeholder="描述您想要的页面设计..."
                           rows={2}
-                          className="w-full px-5 py-4 bg-surface-800/60 border border-surface-700/50 rounded-xl text-white placeholder-surface-500 resize-none focus:outline-none focus:border-nexo-500/50 focus:ring-2 focus:ring-nexo-500/20 transition-all"
+                          className="w-full px-4 py-3 bg-surface-800/60 border border-surface-700/50 rounded-xl text-white placeholder-surface-500 resize-none focus:outline-none focus:border-nexo-500/50 focus:ring-2 focus:ring-nexo-500/20 transition-all text-sm"
                         />
-                        <div className="absolute bottom-3 right-3 text-xs text-surface-500 flex items-center gap-1.5">
-                          <kbd className="px-2 py-1 bg-surface-700/80 rounded-md border border-surface-600 text-surface-400">Enter</kbd>
+                        <div className="absolute bottom-2 right-3 text-xs text-surface-500 flex items-center gap-1.5">
+                          <kbd className="px-1.5 py-0.5 bg-surface-700/80 rounded border border-surface-600 text-surface-400 text-[10px]">Enter</kbd>
                           <span>发送</span>
                         </div>
                       </div>
                       <button
                         onClick={handleSendMessage}
                         disabled={!inputValue.trim() || isGenerating}
-                        className="px-6 bg-gradient-to-r from-nexo-500 to-emerald-500 hover:from-nexo-600 hover:to-emerald-600 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-lg shadow-nexo-500/20 disabled:shadow-none hover:scale-[1.02] disabled:hover:scale-100"
+                        className="px-5 bg-gradient-to-r from-nexo-500 to-emerald-500 hover:from-nexo-600 hover:to-emerald-600 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-lg shadow-nexo-500/20 disabled:shadow-none hover:scale-[1.02] disabled:hover:scale-100"
                       >
                         {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                       </button>
                     </div>
                   </div>
                 </div>
+            </div>
+          </div>
+
+          {/* 右侧面板 - 预览 & 代码 (占 3 列) */}
+          <div className="xl:col-span-3 glass rounded-2xl overflow-hidden flex flex-col h-[calc(100vh-300px)] min-h-[500px] shadow-2xl shadow-black/20">
+            {/* 标签栏 */}
+            <div className="flex items-center border-b border-surface-700/50 bg-surface-900/50">
+              <div className="flex items-center gap-1.5 px-4">
+                <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                <div className="w-3 h-3 rounded-full bg-green-500/80" />
+              </div>
+              <div className="h-4 w-px bg-surface-700 mr-2" />
+              
+              {/* Tab 切换按钮 */}
+              <button
+                onClick={() => setRightPanelTab('preview')}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all relative ${
+                  rightPanelTab === 'preview' ? 'text-white' : 'text-surface-400 hover:text-white hover:bg-surface-800/50'
+                }`}
+              >
+                <Layers className="w-4 h-4" />
+                预览
+                {rightPanelTab === 'preview' && (
+                  <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-nexo-500 to-emerald-500 rounded-full" />
+                )}
+              </button>
+              <button
+                onClick={() => setRightPanelTab('code')}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all relative ${
+                  rightPanelTab === 'code' ? 'text-white' : 'text-surface-400 hover:text-white hover:bg-surface-800/50'
+                }`}
+              >
+                <Code className="w-4 h-4" />
+                代码
+                {projectFiles.length > 0 && (
+                  <span className={`px-2 py-0.5 text-xs rounded-full ${rightPanelTab === 'code' ? 'bg-nexo-500/20 text-nexo-400' : 'bg-surface-700 text-surface-400'}`}>
+                    {projectFiles.length}
+                  </span>
+                )}
+                {rightPanelTab === 'code' && (
+                  <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-nexo-500 to-emerald-500 rounded-full" />
+                )}
+              </button>
+              
+              <div className="flex-1" />
+              
+              {/* 项目类型标签 */}
+              {projectFiles.length > 0 && (
+                <span className={`px-2.5 py-1 ${projectTypeConfig[projectType].bgGlow} text-xs rounded-full font-medium flex items-center gap-1.5 mr-2`}>
+                  <span>{projectTypeConfig[projectType].icon}</span>
+                  <span className="text-white/90">{projectTypeConfig[projectType].label}</span>
+                </span>
+              )}
+              
+              {/* 全屏按钮 */}
+              {projectFiles.length > 0 && rightPanelTab === 'preview' && (
+                <button
+                  onClick={() => setIsFullscreen(true)}
+                  className="p-2 mr-3 hover:bg-surface-700/80 rounded-lg transition-colors text-surface-400 hover:text-white group"
+                  title="全屏预览"
+                >
+                  <Maximize2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                </button>
+              )}
+            </div>
+            
+            {/* 内容区 */}
+            <div className="flex-1 overflow-hidden bg-surface-950">
+              {rightPanelTab === 'preview' ? (
+                <WebContainerPreview
+                  files={projectFiles}
+                  projectType={projectType}
+                  isFullscreen={isFullscreen}
+                  onToggleFullscreen={() => setIsFullscreen(true)}
+                />
               ) : (
                 <FileEditor
                   files={projectFiles}
@@ -1755,46 +1816,6 @@ export default function AICodeGenerator() {
                   onFileDelete={handleFileDelete}
                 />
               )}
-            </div>
-          </div>
-
-          {/* 右侧面板 - 预览 */}
-          <div className="glass rounded-2xl overflow-hidden flex flex-col h-[calc(100vh-300px)] min-h-[500px] shadow-2xl shadow-black/20">
-            <div className="flex items-center justify-between px-5 py-3 border-b border-surface-700/50 bg-surface-900/50">
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-                  <div className="w-3 h-3 rounded-full bg-green-500/80" />
-                </div>
-                <div className="h-4 w-px bg-surface-700" />
-              <Code className="w-4 h-4 text-surface-400" />
-              <span className="text-sm text-surface-300 font-medium">实时预览</span>
-              {projectFiles.length > 0 && (
-                  <span className={`px-2.5 py-1 ${projectTypeConfig[projectType].bgGlow} text-xs rounded-full font-medium flex items-center gap-1.5`}>
-                    <span>{projectTypeConfig[projectType].icon}</span>
-                    <span className="text-white/90">{projectTypeConfig[projectType].label}</span>
-                </span>
-              )}
-            </div>
-              
-              {projectFiles.length > 0 && (
-                <button
-                  onClick={() => setIsFullscreen(true)}
-                  className="p-2 hover:bg-surface-700/80 rounded-lg transition-colors text-surface-400 hover:text-white group"
-                  title="全屏预览"
-                >
-                  <Maximize2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                </button>
-              )}
-            </div>
-            <div className="flex-1 bg-surface-950">
-              <WebContainerPreview
-                files={projectFiles}
-                projectType={projectType}
-                isFullscreen={isFullscreen}
-                onToggleFullscreen={() => setIsFullscreen(true)}
-              />
             </div>
           </div>
         </div>

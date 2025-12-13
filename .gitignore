@@ -46,3 +46,6 @@ coverage/
 *.bak
 *.tmp
 *.temp
+
+# Persisted data
+data/

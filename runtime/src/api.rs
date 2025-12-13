@@ -21,10 +21,12 @@ use tower_http::trace::TraceLayer;
 use crate::function::{CreateFunctionRequest, UpdateFunctionRequest, Function};
 use crate::runtime::{NexoRuntime, FunctionRequest};
 use crate::pool::PoolStats;
+use crate::site::{SiteStore, CreateSiteRequest, Site};
 
 /// 应用状态
 pub struct AppState {
     pub runtime: NexoRuntime,
+    pub sites: SiteStore,
 }
 
 /// API 响应包装
@@ -72,6 +74,7 @@ pub async fn start_server() -> anyhow::Result<()> {
 
     let state = Arc::new(AppState {
         runtime: NexoRuntime::new(max_concurrent),
+        sites: SiteStore::new(),
     });
 
     tracing::info!("📊 Max concurrent isolates: {}", max_concurrent);
@@ -97,6 +100,15 @@ pub async fn start_server() -> anyhow::Result<()> {
         .route("/api/functions/:id/invoke", post(invoke_function))
         .route("/api/functions/:id/stats", get(function_stats))
         
+        // 静态站点 API
+        .route("/api/sites", get(list_sites))
+        .route("/api/sites", post(create_site))
+        .route("/api/sites/:id", get(get_site))
+        .route("/api/sites/:id", delete(delete_site))
+        
+        // 静态站点访问
+        .route("/site/*path", get(serve_site))
+        
         // 函数调用网关
         .route("/fn/*path", get(invoke_by_route))
         .route("/fn/*path", post(invoke_by_route))
@@ -116,6 +128,9 @@ pub async fn start_server() -> anyhow::Result<()> {
     tracing::info!("   GET  /stats           - Runtime statistics");
     tracing::info!("   GET  /api/functions   - List functions");
     tracing::info!("   POST /api/functions   - Create function");
+    tracing::info!("   GET  /api/sites       - List static sites");
+    tracing::info!("   POST /api/sites       - Deploy static site");
+    tracing::info!("   GET  /site/*          - Serve static site");
     tracing::info!("   ANY  /fn/*            - Invoke function by route");
 
     axum::serve(listener, app).await?;
@@ -320,4 +335,151 @@ async fn invoke_by_route(
             }))).into_response()
         }
     }
+}
+
+// ==================== 静态站点 API ====================
+
+/// 列出所有站点
+async fn list_sites(
+    State(state): State<Arc<AppState>>,
+) -> Json<ApiResponse<Vec<Site>>> {
+    let sites = state.sites.list().await;
+    ApiResponse::ok(sites)
+}
+
+/// 创建站点响应
+#[derive(Serialize)]
+struct CreateSiteResponse {
+    id: String,
+    name: String,
+    route: String,
+    url: String,
+    files_count: usize,
+}
+
+/// 创建/部署站点
+async fn create_site(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<CreateSiteRequest>,
+) -> Result<Json<ApiResponse<CreateSiteResponse>>, (StatusCode, Json<ApiResponse<()>>)> {
+    let files_count = req.files.len();
+    
+    match state.sites.create(req).await {
+        Ok(site) => {
+            tracing::info!("✅ Created site: {} ({}) with {} files", site.name, site.id, files_count);
+            
+            // 构建访问 URL
+            let addr = std::env::var("NEXO_ADDR").unwrap_or_else(|_| "localhost:3000".to_string());
+            let host = if addr.starts_with("0.0.0.0") {
+                format!("localhost:{}", addr.split(':').last().unwrap_or("3000"))
+            } else {
+                addr
+            };
+            
+            Ok(ApiResponse::ok(CreateSiteResponse {
+                id: site.id,
+                name: site.name,
+                route: site.route.clone(),
+                url: format!("http://{}/site{}", host, site.route),
+                files_count,
+            }))
+        }
+        Err(e) => Err((StatusCode::BAD_REQUEST, ApiResponse::err(e))),
+    }
+}
+
+/// 获取站点详情
+async fn get_site(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> Result<Json<ApiResponse<Site>>, StatusCode> {
+    match state.sites.get(&id).await {
+        Some(site) => Ok(ApiResponse::ok(site)),
+        None => Err(StatusCode::NOT_FOUND),
+    }
+}
+
+/// 删除站点
+async fn delete_site(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> Result<Json<ApiResponse<()>>, (StatusCode, Json<ApiResponse<()>>)> {
+    match state.sites.delete(&id).await {
+        Ok(_) => {
+            tracing::info!("🗑️ Deleted site: {}", id);
+            Ok(ApiResponse::ok(()))
+        }
+        Err(e) => Err((StatusCode::NOT_FOUND, ApiResponse::err(e))),
+    }
+}
+
+/// 提供静态站点文件
+async fn serve_site(
+    State(state): State<Arc<AppState>>,
+    Path(path): Path<String>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    use axum::http::header;
+    
+    // 解析路径：/site/{site_route}/{file_path}
+    // path 格式: "1234567890/index.html" 或 "1234567890"
+    let path = path.trim_start_matches('/');
+    
+    // 尝试找到匹配的站点
+    let route = format!("/{}", path.split('/').next().unwrap_or(""));
+    
+    if let Some(site) = state.sites.get_by_route(&route).await {
+        // 获取文件路径（移除站点路由部分）
+        let file_path = path.strip_prefix(route.trim_start_matches('/'))
+            .unwrap_or("")
+            .trim_start_matches('/');
+        
+        // 记录访问
+        state.sites.record_visit(&site.id).await;
+        
+        if let Some(file) = state.sites.get_file(&site.id, file_path).await {
+            return axum::response::Response::builder()
+                .status(StatusCode::OK)
+                .header(header::CONTENT_TYPE, &file.mime_type)
+                .header(header::CACHE_CONTROL, "public, max-age=31536000")
+                .header("X-Site-Id", &site.id)
+                .body(axum::body::Body::from(file.content))
+                .unwrap()
+                .into_response();
+        }
+    }
+    
+    // 如果通过路由没找到，尝试在所有站点中搜索该文件
+    // 这处理了构建工具生成的绝对路径资源引用（如 /assets/index.js）
+    let sites = state.sites.list().await;
+    for site in sites {
+        if let Some(file) = state.sites.get_file(&site.id, path).await {
+            state.sites.record_visit(&site.id).await;
+            return axum::response::Response::builder()
+                .status(StatusCode::OK)
+                .header(header::CONTENT_TYPE, &file.mime_type)
+                .header(header::CACHE_CONTROL, "public, max-age=31536000")
+                .header("X-Site-Id", &site.id)
+                .body(axum::body::Body::from(file.content))
+                .unwrap()
+                .into_response();
+        }
+    }
+    
+    // 404
+    axum::response::Response::builder()
+        .status(StatusCode::NOT_FOUND)
+        .header(header::CONTENT_TYPE, "text/html; charset=utf-8")
+        .body(axum::body::Body::from(r#"<!DOCTYPE html>
+<html>
+<head><title>404 Not Found</title></head>
+<body style="font-family: system-ui; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0a0a0a; color: #fff;">
+<div style="text-align: center;">
+<h1 style="font-size: 4rem; margin: 0;">404</h1>
+<p style="color: #888;">Page not found</p>
+</div>
+</body>
+</html>"#))
+        .unwrap()
+        .into_response()
 }

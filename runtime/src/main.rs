@@ -3,6 +3,7 @@ mod runtime;
 mod api;
 mod function;
 mod pool;
+mod site;
 
 use anyhow::Result;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};

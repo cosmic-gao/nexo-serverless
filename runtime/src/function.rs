@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::path::PathBuf;
 use tokio::sync::RwLock;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
@@ -97,19 +98,88 @@ pub struct UpdateFunctionRequest {
     pub status: Option<FunctionStatus>,
 }
 
+/// 持久化数据结构
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+struct PersistedData {
+    functions: HashMap<String, Function>,
+    routes: HashMap<String, String>,
+}
+
 /// 函数存储
 #[derive(Clone)]
 pub struct FunctionStore {
     functions: Arc<RwLock<HashMap<String, Function>>>,
     routes: Arc<RwLock<HashMap<String, String>>>, // route -> function_id
+    storage_path: PathBuf,
 }
 
 impl FunctionStore {
     pub fn new() -> Self {
+        // 获取可执行文件所在目录的父目录（项目根目录）
+        // 或者使用当前工作目录
+        let storage_path = std::env::current_dir()
+            .unwrap_or_else(|_| PathBuf::from("."))
+            .join("data")
+            .join("functions.json");
+        
+        println!("[FunctionStore] 数据存储路径: {}", storage_path.display());
+        
+        Self::with_storage_path(storage_path)
+    }
+    
+    pub fn with_storage_path(storage_path: PathBuf) -> Self {
+        // 先同步加载数据
+        let (functions_data, routes_data) = match Self::load_from_path(&storage_path) {
+            Ok(data) => {
+                println!("[FunctionStore] 已加载 {} 个函数", data.functions.len());
+                (data.functions, data.routes)
+            }
+            Err(_) => (HashMap::new(), HashMap::new()),
+        };
+        
         Self {
-            functions: Arc::new(RwLock::new(HashMap::new())),
-            routes: Arc::new(RwLock::new(HashMap::new())),
+            functions: Arc::new(RwLock::new(functions_data)),
+            routes: Arc::new(RwLock::new(routes_data)),
+            storage_path,
         }
+    }
+    
+    /// 从文件加载数据（静态方法）
+    fn load_from_path(path: &PathBuf) -> Result<PersistedData, String> {
+        if !path.exists() {
+            return Ok(PersistedData::default());
+        }
+        
+        let content = std::fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read storage file: {}", e))?;
+        
+        serde_json::from_str(&content)
+            .map_err(|e| format!("Failed to parse storage file: {}", e))
+    }
+    
+    /// 异步保存数据
+    async fn save(&self) -> Result<(), String> {
+        let functions = self.functions.read().await;
+        let routes = self.routes.read().await;
+        
+        let data = PersistedData {
+            functions: functions.clone(),
+            routes: routes.clone(),
+        };
+        
+        // 确保目录存在
+        if let Some(parent) = self.storage_path.parent() {
+            std::fs::create_dir_all(parent)
+                .map_err(|e| format!("Failed to create storage directory: {}", e))?;
+        }
+        
+        let content = serde_json::to_string_pretty(&data)
+            .map_err(|e| format!("Failed to serialize data: {}", e))?;
+        
+        std::fs::write(&self.storage_path, content)
+            .map_err(|e| format!("Failed to write storage file: {}", e))?;
+        
+        Ok(())
     }
 
     /// 创建函数
@@ -152,6 +222,13 @@ impl FunctionStore {
 
         routes.insert(req.route, id.clone());
         functions.insert(id, function.clone());
+        
+        // 释放锁后保存
+        drop(functions);
+        drop(routes);
+        if let Err(e) = self.save().await {
+            eprintln!("[FunctionStore] 保存失败: {}", e);
+        }
 
         Ok(function)
     }
@@ -257,8 +334,17 @@ impl FunctionStore {
         }
 
         function.updated_at = Utc::now();
+        
+        let result = function.clone();
+        
+        // 释放锁后保存
+        drop(functions);
+        drop(routes);
+        if let Err(e) = self.save().await {
+            eprintln!("[FunctionStore] 保存失败: {}", e);
+        }
 
-        Ok(function.clone())
+        Ok(result)
     }
 
     /// 删除函数
@@ -268,6 +354,14 @@ impl FunctionStore {
 
         if let Some(function) = functions.remove(id) {
             routes.remove(&function.route);
+            
+            // 释放锁后保存
+            drop(functions);
+            drop(routes);
+            if let Err(e) = self.save().await {
+                eprintln!("[FunctionStore] 保存失败: {}", e);
+            }
+            
             Ok(())
         } else {
             Err("Function not found".to_string())
