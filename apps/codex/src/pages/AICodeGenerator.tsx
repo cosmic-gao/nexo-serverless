@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import {
   Loader2,
   Code,
@@ -1359,6 +1359,7 @@ export default function AICodeGenerator() {
   const [sidebarWidth, setSidebarWidth] = useState<number>(320)
   const [isChatCollapsed, setIsChatCollapsed] = useState<boolean>(false)
   const [isFileListCollapsed, setIsFileListCollapsed] = useState<boolean>(false)
+  const [windowWidth, setWindowWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1920)
   const [isApiListCollapsed, setIsApiListCollapsed] = useState<boolean>(false)
   const [functions, setFunctions] = useState<Function[]>([])
   const [functionsLoading, setFunctionsLoading] = useState<boolean>(false)
@@ -1423,6 +1424,15 @@ export default function AICodeGenerator() {
       document.body.classList.remove('select-none')
     }
   }, [isResizing, sidebarWidth])
+
+  // 监听窗口宽度变化
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -1563,6 +1573,39 @@ export default function AICodeGenerator() {
       </div>
     )
   }
+
+  // 计算是否空间紧张（根据左侧状态和右侧可用宽度）
+  const isSpaceTight = useMemo(() => {
+    const rightSideWidth = windowWidth - sidebarWidth
+    // 当右侧可用宽度小于 800px 时，认为空间紧张
+    const isRightNarrow = rightSideWidth < 800
+    // 当左侧展开且至少有一个区域未折叠时，也认为空间紧张
+    const isLeftExpanded = sidebarWidth > 0 && (!isChatCollapsed || !isFileListCollapsed)
+    return isRightNarrow || isLeftExpanded
+  }, [windowWidth, sidebarWidth, isChatCollapsed, isFileListCollapsed])
+
+  // 计算右侧可用宽度，用于更精确的响应式控制
+  const rightSideWidth = useMemo(() => {
+    return windowWidth - sidebarWidth
+  }, [windowWidth, sidebarWidth])
+
+  // 根据右侧宽度决定显示策略
+  const showButtonText = useMemo(() => {
+    return rightSideWidth > 1000
+  }, [rightSideWidth])
+
+  const showAllButtons = useMemo(() => {
+    return rightSideWidth > 700
+  }, [rightSideWidth])
+
+  // 根据右侧宽度决定显示哪些操作按钮
+  const showSecondaryButtons = useMemo(() => {
+    return rightSideWidth > 500
+  }, [rightSideWidth])
+
+  const showTertiaryButtons = useMemo(() => {
+    return rightSideWidth > 600
+  }, [rightSideWidth])
 
   return (
     <div className="fixed inset-0 h-screen w-screen overflow-hidden bg-surface-950 flex m-0 p-0">
@@ -1840,139 +1883,152 @@ export default function AICodeGenerator() {
       {/* 主内容区域 */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* 顶部操作区域 */}
-        <div className="flex items-center justify-between border-b border-surface-700/40 bg-surface-900/60 backdrop-blur-sm px-4 py-3 flex-shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5">
+        <div className="flex items-center border-b border-surface-700/40 bg-surface-900/60 backdrop-blur-sm px-2 sm:px-4 py-3 flex-shrink-0 overflow-hidden">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1 overflow-hidden">
+            <div className={`flex items-center gap-1.5 flex-shrink-0 ${rightSideWidth < 600 ? 'hidden sm:flex' : 'flex'}`}>
               <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
               <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
               <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
             </div>
-            <div className="h-4 w-px bg-surface-700/50" />
+            <div className={`h-4 w-px bg-surface-700/50 flex-shrink-0 ${rightSideWidth < 600 ? 'hidden sm:block' : 'block'}`} />
 
             {/* 切换标签 */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 overflow-hidden">
               <button
                 onClick={() => {
                   setViewMode('preview')
                   setSelectedApi(null)
                 }}
-                className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all rounded-xl ${
+                className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 md:px-5 py-2.5 text-sm font-medium transition-all rounded-xl flex-shrink-0 ${
                   viewMode === 'preview'
                     ? 'text-white bg-gradient-to-r from-nexo-500/20 to-nexo-500/10 border border-nexo-500/30 shadow-lg shadow-nexo-500/10' 
                     : 'text-surface-400 hover:text-white hover:bg-surface-800/40'
                 }`}
               >
                 <Layers className="w-4 h-4" />
-                <span>预览</span>
+                <span className={showButtonText ? 'inline' : 'hidden'}>预览</span>
               </button>
-              <button
-                onClick={() => {
-                  setViewMode('code')
-                  setSelectedApi(null)
-                }}
-                className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all rounded-xl ${
-                  viewMode === 'code'
-                    ? 'text-white bg-gradient-to-r from-nexo-500/20 to-nexo-500/10 border border-nexo-500/30 shadow-lg shadow-nexo-500/10' 
-                    : 'text-surface-400 hover:text-white hover:bg-surface-800/40'
-                }`}
-              >
-                <Code className="w-4 h-4" />
-                <span>代码</span>
-                {projectFiles.length > 0 && (
-                  <span className={`px-2 py-0.5 text-xs rounded-lg ml-1 font-medium ${
-                    viewMode === 'code'
-                      ? 'bg-nexo-500/20 text-nexo-400' 
-                      : 'bg-surface-700 text-surface-400'
-                  }`}>
-                    {projectFiles.length}
-                  </span>
-                )}
-              </button>
-              {selectedApi && (
+              {selectedApi ? (
                 <button
                   onClick={() => setViewMode('api')}
-                  className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all rounded-xl ${
+                  className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 md:px-5 py-2.5 text-sm font-medium transition-all rounded-xl flex-shrink-0 ${
                     viewMode === 'api'
                       ? 'text-white bg-gradient-to-r from-nexo-500/20 to-nexo-500/10 border border-nexo-500/30 shadow-lg shadow-nexo-500/10' 
                       : 'text-surface-400 hover:text-white hover:bg-surface-800/40'
                   }`}
                 >
                   <Code2 className="w-4 h-4" />
-                  <span>API 详情</span>
+                  <span className={showButtonText ? 'inline' : 'hidden'}>API 详情</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setViewMode('code')
+                    setSelectedApi(null)
+                  }}
+                  className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 md:px-5 py-2.5 text-sm font-medium transition-all rounded-xl flex-shrink-0 ${
+                    viewMode === 'code'
+                      ? 'text-white bg-gradient-to-r from-nexo-500/20 to-nexo-500/10 border border-nexo-500/30 shadow-lg shadow-nexo-500/10' 
+                      : 'text-surface-400 hover:text-white hover:bg-surface-800/40'
+                  }`}
+                >
+                  <Code className="w-4 h-4" />
+                  <span className={showButtonText ? 'inline' : 'hidden'}>代码</span>
+                  {projectFiles.length > 0 && (
+                    <span className={`px-2 py-0.5 text-xs rounded-lg ml-1 font-medium ${
+                      viewMode === 'code'
+                        ? 'bg-nexo-500/20 text-nexo-400' 
+                        : 'bg-surface-700 text-surface-400'
+                    }`}>
+                      {projectFiles.length}
+                    </span>
+                  )}
                 </button>
               )}
             </div>
           </div>
 
           {/* 操作按钮区域 */}
-          <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-1 md:gap-1.5 lg:gap-2 flex-shrink-0 ml-2 ${showAllButtons ? 'flex' : 'hidden sm:flex'}`}>
             {projectType !== 'html' && (
               <>
                 {canStopPreview ? (
                   <button
                     onClick={() => previewRef.current?.stop()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs rounded-lg transition-colors border border-red-500/30"
+                    className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs rounded-lg transition-colors border border-red-500/30 flex-shrink-0"
+                    title="停止"
                   >
                     <Square className="w-3.5 h-3.5" />
-                    停止
+                    <span className={showButtonText ? 'inline' : 'hidden'}>停止</span>
                   </button>
                 ) : (
                   <button
                     onClick={() => previewRef.current?.start()}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-nexo-500 hover:bg-nexo-600 text-white text-xs rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 bg-nexo-500 hover:bg-nexo-600 text-white text-xs rounded-lg transition-colors flex-shrink-0"
+                    title="运行"
                   >
                     <Play className="w-3.5 h-3.5" />
-                    运行
+                    <span className={showButtonText ? 'inline' : 'hidden'}>运行</span>
                   </button>
                 )}
               </>
             )}
-            <button
-              onClick={() => previewRef.current?.refresh()}
-              className="p-1.5 hover:bg-surface-700 rounded-lg transition-colors text-surface-400 hover:text-white"
-              title="刷新预览"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleDownload}
-              className="p-1.5 hover:bg-surface-700 rounded-lg transition-colors text-surface-400 hover:text-white"
-              title="下载项目"
-            >
-              <Download className="w-4 h-4" />
-            </button>
+            {showSecondaryButtons && (
+              <>
+                <button
+                  onClick={() => previewRef.current?.refresh()}
+                  className="p-1.5 hover:bg-surface-700 rounded-lg transition-colors text-surface-400 hover:text-white flex-shrink-0"
+                  title="刷新预览"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleDownload}
+                  className="p-1.5 hover:bg-surface-700 rounded-lg transition-colors text-surface-400 hover:text-white flex-shrink-0"
+                  title="下载项目"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+              </>
+            )}
             <button
               onClick={handlePublish}
               disabled={isPublishing || projectFiles.length === 0}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-nexo-500 hover:bg-nexo-600 text-white text-xs rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 bg-nexo-500 hover:bg-nexo-600 text-white text-xs rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+              title="发布"
             >
               {isPublishing ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>发布中...</span>
+                  <span className={showButtonText ? 'inline' : 'hidden'}>发布中...</span>
                 </>
               ) : (
                 <>
                   <Rocket className="w-3.5 h-3.5" />
-                  <span>发布</span>
+                  <span className={showButtonText ? 'inline' : 'hidden'}>发布</span>
                 </>
               )}
             </button>
-            <button
-              onClick={() => previewRef.current?.toggleLogs()}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg transition-colors text-surface-400 hover:text-white hover:bg-surface-800/50"
-            >
-              <Terminal className="w-3.5 h-3.5" />
-              日志
-            </button>
-            {projectFiles.length > 0 && viewMode === 'preview' && (
-              <button
-                onClick={() => setIsFullscreen(true)}
-                className="p-1.5 hover:bg-surface-700/80 rounded-md transition-colors text-surface-400 hover:text-white group"
-                title="全屏预览"
-              >
-                <Maximize2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-              </button>
+            {showTertiaryButtons && (
+              <>
+                <button
+                  onClick={() => previewRef.current?.toggleLogs()}
+                  className="flex items-center gap-1.5 px-2 md:px-2.5 py-1.5 text-xs rounded-lg transition-colors text-surface-400 hover:text-white hover:bg-surface-800/50 flex-shrink-0"
+                  title="日志"
+                >
+                  <Terminal className="w-3.5 h-3.5" />
+                  <span className={showButtonText ? 'inline' : 'hidden'}>日志</span>
+                </button>
+                {projectFiles.length > 0 && viewMode === 'preview' && (
+                  <button
+                    onClick={() => setIsFullscreen(true)}
+                    className="p-1.5 hover:bg-surface-700/80 rounded-md transition-colors text-surface-400 hover:text-white group flex-shrink-0"
+                    title="全屏预览"
+                  >
+                    <Maximize2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
