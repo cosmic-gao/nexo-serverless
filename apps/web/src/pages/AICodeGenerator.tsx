@@ -19,16 +19,37 @@ import {
   Terminal,
   Maximize2,
   Copy,
-  CheckCircle2
+  CheckCircle2,
+  Play,
+  RefreshCw,
+  Square,
+  ChevronRight,
+  ChevronDown,
+  FileCode,
+  FileJson,
+  FileType,
+  File,
+  Plus,
+  Code2,
+  ExternalLink as ExternalLinkIcon
 } from 'lucide-react'
-import api from '../lib/api'
+import api, { Function } from '../lib/api'
 import { ProjectFile, ProjectType, getTemplate, allTemplates } from '../lib/projectTemplates'
-import WebContainerPreview from '../components/WebContainerPreview'
+import WebContainerPreview, { WebContainerPreviewHandle } from '../components/WebContainerPreview'
 import FileEditor from '../components/FileEditor'
+import ChatPanel from '../components/ChatPanel'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
+}
+
+// 聊天面板专用消息类型（满足 ChatPanel 的必需字段）
+interface ChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
 }
 
 // 模拟 AI 生成代码（实际项目中应接入真实 AI API）
@@ -1186,7 +1207,128 @@ const features = [{ icon: '🍃', title: 'Vue 3', desc: '组合式 API' }, { ico
   return files.map(f => f.path === 'src/App.vue' ? { ...f, content: componentCode } : f)
 }
 
-type RightPanelTab = 'preview' | 'code'
+
+// 文件列表相关类型和函数
+interface FileTreeNode {
+  name: string
+  path: string
+  isDirectory: boolean
+  children: FileTreeNode[]
+  file?: ProjectFile
+}
+
+function getFileIcon(filename: string) {
+  const ext = filename.split('.').pop()?.toLowerCase()
+  switch (ext) {
+    case 'html': return <FileCode className="w-4 h-4 text-orange-400" />
+    case 'css': return <FileType className="w-4 h-4 text-blue-400" />
+    case 'js':
+    case 'jsx': return <FileCode className="w-4 h-4 text-yellow-400" />
+    case 'ts':
+    case 'tsx': return <FileCode className="w-4 h-4 text-blue-500" />
+    case 'vue': return <FileCode className="w-4 h-4 text-green-400" />
+    case 'json': return <FileJson className="w-4 h-4 text-yellow-300" />
+    default: return <File className="w-4 h-4 text-surface-400" />
+  }
+}
+
+function buildFileTree(files: ProjectFile[]): FileTreeNode[] {
+  const root: FileTreeNode[] = []
+  files.forEach(file => {
+    const parts = file.path.split('/')
+    let currentLevel = root
+    parts.forEach((part, index) => {
+      const isLast = index === parts.length - 1
+      const existingNode = currentLevel.find(n => n.name === part)
+      if (existingNode) {
+        if (isLast) existingNode.file = file
+        currentLevel = existingNode.children
+      } else {
+        const newNode: FileTreeNode = {
+          name: part,
+          path: parts.slice(0, index + 1).join('/'),
+          isDirectory: !isLast,
+          children: [],
+          file: isLast ? file : undefined,
+        }
+        currentLevel.push(newNode)
+        currentLevel = newNode.children
+      }
+    })
+  })
+  const sortNodes = (nodes: FileTreeNode[]) => {
+    nodes.sort((a, b) => {
+      if (a.isDirectory && !b.isDirectory) return -1
+      if (!a.isDirectory && b.isDirectory) return 1
+      return a.name.localeCompare(b.name)
+    })
+    nodes.forEach(n => sortNodes(n.children))
+  }
+  sortNodes(root)
+  return root
+}
+
+// 文件树节点组件
+function FileTreeNodeComponent({
+  node,
+  activeFile,
+  onFileSelect,
+  level = 0,
+}: {
+  node: FileTreeNode
+  activeFile: string | null
+  onFileSelect: (path: string) => void
+  level?: number
+}) {
+  const [expanded, setExpanded] = useState(true)
+
+  if (node.isDirectory) {
+    return (
+      <div>
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-surface-800 rounded text-sm text-surface-300"
+          style={{ paddingLeft: `${level * 12 + 8}px` }}
+        >
+          {expanded ? (
+            <ChevronDown className="w-3.5 h-3.5 text-surface-500" />
+          ) : (
+            <ChevronRight className="w-3.5 h-3.5 text-surface-500" />
+          )}
+          <span>{node.name}</span>
+        </button>
+        {expanded && (
+          <div>
+            {node.children.map(child => (
+              <FileTreeNodeComponent
+                key={child.path}
+                node={child}
+                activeFile={activeFile}
+                onFileSelect={onFileSelect}
+                level={level + 1}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={() => onFileSelect(node.path)}
+      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors ${
+        activeFile === node.path
+          ? 'bg-nexo-500/20 text-nexo-400'
+          : 'text-surface-300 hover:bg-surface-800'
+      }`}
+      style={{ paddingLeft: `${level * 12 + 8}px` }}
+    >
+      {getFileIcon(node.name)}
+      <span className="truncate">{node.name}</span>
+    </button>
+  )
+}
 
 // 项目类型图标和颜色
 const projectTypeConfig = {
@@ -1204,12 +1346,116 @@ export default function AICodeGenerator() {
   const [projectType, setProjectType] = useState<ProjectType>('html')
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([])
   const [activeFile, setActiveFile] = useState<string | null>(null)
-  const [rightPanelTab, setRightPanelTab] = useState<RightPanelTab>('preview')
+  const [showCodeEditor, setShowCodeEditor] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
   const [publishStatus, setPublishStatus] = useState('')
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
   const [urlCopied, setUrlCopied] = useState(false)
+  const [showChatPanel, setShowChatPanel] = useState(true)
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
+  const [sidebarWidth, setSidebarWidth] = useState<number>(320)
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false)
+  const [isChatCollapsed, setIsChatCollapsed] = useState<boolean>(false)
+  const [isFileListCollapsed, setIsFileListCollapsed] = useState<boolean>(false)
+  const [isApiListCollapsed, setIsApiListCollapsed] = useState<boolean>(false)
+  const [functions, setFunctions] = useState<Function[]>([])
+  const [functionsLoading, setFunctionsLoading] = useState<boolean>(false)
+  const [chatHeight, setChatHeight] = useState<number>(50) // 聊天面板高度百分比
+  const [isResizing, setIsResizing] = useState<boolean>(false)
+  const [isResizingVertical, setIsResizingVertical] = useState<boolean>(false)
+  const resizeStartXRef = useRef<number>(0)
+  const resizeStartYRef = useRef<number>(0)
+  const startWidthRef = useRef<number>(320)
+  const startChatHeightRef = useRef<number>(50)
+  const previewRef = useRef<WebContainerPreviewHandle>(null)
+  const [canStopPreview, setCanStopPreview] = useState(false)
+  const [isPreviewRunning, setIsPreviewRunning] = useState(false)
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setCanStopPreview(previewRef.current?.canStop() ?? false)
+      setIsPreviewRunning(previewRef.current?.isRunning() ?? false)
+    }, 500)
+    return () => clearInterval(id)
+  }, [])
+
+  // 获取函数列表
+  const fetchFunctions = async () => {
+    setFunctionsLoading(true)
+    try {
+      const res = await api.listFunctions()
+      if (res.success && res.data) {
+        setFunctions(res.data)
+      }
+    } catch (error) {
+      console.error('获取函数列表失败:', error)
+    } finally {
+      setFunctionsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchFunctions()
+  }, [])
+
+  // 侧栏水平拖拽
+  const handleResizeStart = (e: any) => {
+    setIsResizing(true)
+    resizeStartXRef.current = e.clientX
+    startWidthRef.current = sidebarWidth
+  }
+
+  // 聊天和文件列表垂直拖拽
+  const handleVerticalResizeStart = (e: any) => {
+    setIsResizingVertical(true)
+    resizeStartYRef.current = e.clientY
+    startChatHeightRef.current = chatHeight
+  }
+
+  useEffect(() => {
+    if (!isResizing) return
+    const onMove = (e: MouseEvent) => {
+      const delta = e.clientX - resizeStartXRef.current
+      const next = Math.min(600, Math.max(240, startWidthRef.current + delta))
+      setSidebarWidth(next)
+    }
+    const onUp = () => setIsResizing(false)
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    document.body.style.cursor = 'col-resize'
+    document.body.classList.add('select-none')
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      document.body.style.cursor = ''
+      document.body.classList.remove('select-none')
+    }
+  }, [isResizing, sidebarWidth])
+
+  useEffect(() => {
+    if (!isResizingVertical) return
+    const onMove = (e: MouseEvent) => {
+      const container = document.querySelector('.sidebar-container') as HTMLElement
+      if (!container) return
+      const containerHeight = container.clientHeight
+      const delta = e.clientY - resizeStartYRef.current
+      const deltaPercent = (delta / containerHeight) * 100
+      const next = Math.min(90, Math.max(10, startChatHeightRef.current + deltaPercent))
+      setChatHeight(next)
+    }
+    const onUp = () => setIsResizingVertical(false)
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    document.body.style.cursor = 'row-resize'
+    document.body.classList.add('select-none')
+    return () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      document.body.style.cursor = ''
+      document.body.classList.remove('select-none')
+    }
+  }, [isResizingVertical, chatHeight])
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -1354,7 +1600,6 @@ export default function AICodeGenerator() {
     setProjectFiles([])
     setActiveFile(null)
     setPublishedUrl(null)
-    setRightPanelTab('preview')
   }
 
   const quickPrompts = [
@@ -1554,9 +1799,9 @@ export default function AICodeGenerator() {
         )}
 
         {/* 主内容区域 - 预览区域更大 */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           {/* 左侧面板 - AI 对话 (占 4 列) */}
-          <div className="lg:col-span-4 xl:col-span-3 glass rounded-xl overflow-hidden flex flex-col h-[calc(100vh-200px)] min-h-[600px] shadow-2xl shadow-black/30 border border-surface-700/30">
+          <div className="hidden">
             {/* 标题栏 - 更紧凑 */}
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-surface-700/50 bg-surface-900/70">
               <div className="flex items-center gap-2">
@@ -1740,8 +1985,8 @@ export default function AICodeGenerator() {
           </div>
 
           {/* 右侧面板 - 预览 & 代码 (占 8-9 列，更大的预览区) */}
-          <div className="lg:col-span-8 xl:col-span-9 glass rounded-xl overflow-hidden flex flex-col h-[calc(100vh-200px)] min-h-[600px] shadow-2xl shadow-black/30 border border-surface-700/30">
-            {/* 标签栏 - 更紧凑 */}
+          <div className="glass rounded-xl overflow-hidden flex flex-col h-[calc(100vh-200px)] min-h-[600px] shadow-2xl shadow-black/30 border border-surface-700/30">
+            {/* 顶部栏：标签 + 预览控制 */}
             <div className="flex items-center border-b border-surface-700/50 bg-surface-900/70">
               <div className="flex items-center gap-1 px-3">
                 <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
@@ -1749,79 +1994,346 @@ export default function AICodeGenerator() {
                 <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
               </div>
               <div className="h-3 w-px bg-surface-700 mx-2" />
-              
-              {/* Tab 切换按钮 */}
-              <button
-                onClick={() => setRightPanelTab('preview')}
-                className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-all relative ${
-                  rightPanelTab === 'preview' ? 'text-white' : 'text-surface-400 hover:text-white hover:bg-surface-800/50'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>预览</span>
-                {rightPanelTab === 'preview' && (
-                  <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-nexo-500 to-emerald-500 rounded-full" />
+
+              {/* 切换标签 */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setShowCodeEditor(false)}
+                  className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-all rounded-md ${
+                    !showCodeEditor ? 'text-white bg-surface-800/60' : 'text-surface-400 hover:text-white hover:bg-surface-800/40'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>预览</span>
+                </button>
+                <button
+                  onClick={() => setShowCodeEditor(true)}
+                  className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-all rounded-md ${
+                    showCodeEditor ? 'text-white bg-surface-800/60' : 'text-surface-400 hover:text-white hover:bg-surface-800/40'
+                  }`}
+                >
+                  <Code className="w-3.5 h-3.5" />
+                  <span>代码</span>
+                  {projectFiles.length > 0 && (
+                    <span className={`px-1.5 py-0.5 text-xs rounded-md ml-1 ${
+                      showCodeEditor ? 'bg-nexo-500/20 text-nexo-400' : 'bg-surface-700 text-surface-400'
+                    }`}>
+                      {projectFiles.length}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              <div className="flex-1" />
+
+              {/* 预览控制 */}
+              <div className="flex items-center gap-2 pr-2">
+                {projectType !== 'html' && (
+                  <>
+                    {canStopPreview ? (
+                      <button
+                        onClick={() => previewRef.current?.stop()}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs rounded-lg transition-colors"
+                      >
+                        <Square className="w-3.5 h-3.5" />
+                        停止
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => previewRef.current?.start()}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-nexo-500 hover:bg-nexo-600 text-white text-xs rounded-lg transition-colors"
+                      >
+                        <Play className="w-3.5 h-3.5" />
+                        运行
+                      </button>
+                    )}
+                  </>
                 )}
-              </button>
-              <button
-                onClick={() => setRightPanelTab('code')}
-                className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-all relative ${
-                  rightPanelTab === 'code' ? 'text-white' : 'text-surface-400 hover:text-white hover:bg-surface-800/50'
-                }`}
-              >
-                <Code className="w-3.5 h-3.5" />
-                <span>代码</span>
+                <button
+                  onClick={() => previewRef.current?.refresh()}
+                  className="p-1.5 hover:bg-surface-700 rounded-lg transition-colors text-surface-400 hover:text-white"
+                  title="刷新预览"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => previewRef.current?.toggleLogs()}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg transition-colors text-surface-400 hover:text-white hover:bg-surface-800/50"
+                >
+                  <Terminal className="w-3.5 h-3.5" />
+                  日志
+                </button>
+
+                {/* 项目类型标签 */}
                 {projectFiles.length > 0 && (
-                  <span className={`px-1.5 py-0.5 text-xs rounded-md ml-1 ${rightPanelTab === 'code' ? 'bg-nexo-500/20 text-nexo-400' : 'bg-surface-700 text-surface-400'}`}>
-                    {projectFiles.length}
+                  <span className={`ml-2 px-2 py-1 ${projectTypeConfig[projectType].bgGlow} text-xs rounded-md font-medium flex items-center gap-1 mr-2`}>
+                    <span>{projectTypeConfig[projectType].icon}</span>
+                    <span className="text-white/90">{projectTypeConfig[projectType].label}</span>
                   </span>
                 )}
-                {rightPanelTab === 'code' && (
-                  <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-gradient-to-r from-nexo-500 to-emerald-500 rounded-full" />
+
+                {/* 全屏按钮（仅预览时） */}
+                {projectFiles.length > 0 && !showCodeEditor && (
+                  <button
+                    onClick={() => setIsFullscreen(true)}
+                    className="p-1.5 mr-2 hover:bg-surface-700/80 rounded-md transition-colors text-surface-400 hover:text-white group"
+                    title="全屏预览"
+                  >
+                    <Maximize2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                  </button>
                 )}
-              </button>
-              
-              <div className="flex-1" />
-              
-              {/* 项目类型标签 */}
-              {projectFiles.length > 0 && (
-                <span className={`px-2 py-1 ${projectTypeConfig[projectType].bgGlow} text-xs rounded-md font-medium flex items-center gap-1 mr-2`}>
-                  <span>{projectTypeConfig[projectType].icon}</span>
-                  <span className="text-white/90">{projectTypeConfig[projectType].label}</span>
-                </span>
-              )}
-              
-              {/* 全屏按钮 */}
-              {projectFiles.length > 0 && rightPanelTab === 'preview' && (
-                <button
-                  onClick={() => setIsFullscreen(true)}
-                  className="p-1.5 mr-2 hover:bg-surface-700/80 rounded-md transition-colors text-surface-400 hover:text-white group"
-                  title="全屏预览"
-                >
-                  <Maximize2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                </button>
-              )}
+              </div>
             </div>
             
             {/* 内容区 */}
             <div className="flex-1 overflow-hidden bg-surface-950">
-              {rightPanelTab === 'preview' ? (
-                <WebContainerPreview
-                  files={projectFiles}
-                  projectType={projectType}
-                  isFullscreen={isFullscreen}
-                  onToggleFullscreen={() => setIsFullscreen(true)}
-                />
-              ) : (
-                <FileEditor
-                  files={projectFiles}
-                  activeFile={activeFile}
-                  onFileSelect={setActiveFile}
-                  onFileChange={handleFileChange}
-                  onFileCreate={handleFileCreate}
-                  onFileDelete={handleFileDelete}
-                />
-              )}
+              <div className="h-full w-full flex">
+                <div className="h-full border-r border-surface-800 bg-surface-900/60 flex flex-col sidebar-container" style={{ width: isSidebarCollapsed ? 12 : sidebarWidth, minWidth: isSidebarCollapsed ? 8 : 240 }}>
+                  {isSidebarCollapsed ? (
+                    <div className="flex-1 flex items-center justify-center">
+                      <button
+                        onClick={() => setIsSidebarCollapsed(false)}
+                        className="w-6 h-6 rounded-md bg-surface-800 hover:bg-surface-700 text-surface-300 hover:text-white text-xs"
+                        title="展开侧边栏"
+                      >
+                        ▶
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col h-full">
+                      {/* 聊天面板 */}
+                      <div 
+                        className="flex flex-col border-b border-surface-800/80" 
+                        style={{ 
+                          height: isChatCollapsed ? 'auto' : (isFileListCollapsed ? '100%' : `${chatHeight}%`), 
+                          minHeight: isChatCollapsed ? 'auto' : '100px',
+                          flexShrink: 0
+                        }}
+                      >
+                        <div className="flex items-center justify-between px-2 py-1 bg-surface-900/70">
+                          <span className="text-xs text-surface-400">AI 助手</span>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setIsChatCollapsed(!isChatCollapsed)}
+                              className="px-2 py-0.5 text-xs text-surface-400 hover:text-white hover:bg-surface-800 rounded"
+                              title={isChatCollapsed ? "展开聊天" : "折叠聊天"}
+                            >
+                              {isChatCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3 rotate-90" />}
+                            </button>
+                            <button
+                              onClick={() => setIsSidebarCollapsed(true)}
+                              className="px-2 py-0.5 text-xs text-surface-400 hover:text-white hover:bg-surface-800 rounded"
+                              title="折叠侧边栏"
+                            >
+                              ◀
+                            </button>
+                          </div>
+                        </div>
+                        {!isChatCollapsed && (
+                          <div className="flex-1 min-h-0">
+                            <ChatPanel
+                              messages={chatMessages}
+                              isLoading={isGenerating}
+                              onMessageSubmit={(message) => {
+                                setChatMessages(prev => [...prev, {
+                                  id: Date.now().toString(),
+                                  role: 'user',
+                                  content: message,
+                                  timestamp: new Date()
+                                }])
+                                setInputValue(message)
+                                handleSendMessage()
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 垂直分隔条 */}
+                      {!isChatCollapsed && !isFileListCollapsed && (
+                        <div
+                          onMouseDown={handleVerticalResizeStart}
+                          className={`h-1 cursor-row-resize bg-surface-800 hover:bg-surface-700 ${isResizingVertical ? 'bg-nexo-500' : ''}`}
+                          title="拖拽调整高度"
+                        />
+                      )}
+
+                      {/* 文件列表和 API 列表容器 */}
+                      <div className="flex flex-col flex-1 min-h-0" style={{ 
+                        height: isChatCollapsed ? '100%' : `${100 - chatHeight}%`,
+                        flexShrink: 0
+                      }}>
+                        {/* 文件列表 */}
+                        <div className="flex flex-col flex-1 min-h-0">
+                          <div className="flex items-center justify-between px-2 py-1 border-b border-surface-800/80 bg-surface-900/70">
+                            <span className="text-xs text-surface-400">文件列表</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => setIsFileListCollapsed(!isFileListCollapsed)}
+                                className="px-2 py-0.5 text-xs text-surface-400 hover:text-white hover:bg-surface-800 rounded"
+                                title={isFileListCollapsed ? "展开文件列表" : "折叠文件列表"}
+                              >
+                                {isFileListCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3 rotate-90" />}
+                              </button>
+                            </div>
+                          </div>
+                          {!isFileListCollapsed && (
+                            <div className="flex-1 overflow-y-auto py-1">
+                              {projectFiles.length === 0 ? (
+                                <div className="px-2 py-4 text-center text-xs text-surface-500">
+                                  暂无文件
+                                </div>
+                              ) : (
+                                buildFileTree(projectFiles).map(node => (
+                                  <FileTreeNodeComponent
+                                    key={node.path}
+                                    node={node}
+                                    activeFile={activeFile}
+                                    onFileSelect={setActiveFile}
+                                  />
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* API 列表 */}
+                        <div className="flex flex-col border-t border-surface-800/80" style={{ flexShrink: 0, maxHeight: isApiListCollapsed ? 'auto' : '250px' }}>
+                          <div className="flex items-center justify-between px-2 py-1 border-b border-surface-800/80 bg-surface-900/70">
+                            <span className="text-xs text-surface-400">API 列表</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => setIsApiListCollapsed(!isApiListCollapsed)}
+                                className="px-2 py-0.5 text-xs text-surface-400 hover:text-white hover:bg-surface-800 rounded"
+                                title={isApiListCollapsed ? "展开 API 列表" : "折叠 API 列表"}
+                              >
+                                {isApiListCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3 rotate-90" />}
+                              </button>
+                            </div>
+                          </div>
+                        {!isApiListCollapsed && (
+                          <div className="flex-1 overflow-y-auto py-1" style={{ maxHeight: '200px' }}>
+                            {functionsLoading ? (
+                              <div className="px-2 py-4 text-center text-xs text-surface-500">
+                                <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2" />
+                                加载中...
+                              </div>
+                            ) : functions.length === 0 ? (
+                              <div className="px-2 py-4 text-center text-xs text-surface-500">
+                                <div className="mb-2">暂无函数</div>
+                                <a
+                                  href="/functions/new"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-xs text-nexo-400 hover:text-nexo-300 hover:bg-surface-800 rounded transition-colors"
+                                >
+                                  <Plus className="w-3 h-3" />
+                                  创建函数
+                                </a>
+                              </div>
+                            ) : (
+                              <div className="space-y-1">
+                                {functions.map((fn) => (
+                                  <div
+                                    key={fn.id}
+                                    className="px-2 py-1.5 mx-1 rounded text-sm hover:bg-surface-800 transition-colors group"
+                                  >
+                                    <div className="flex items-center justify-between mb-1">
+                                      <div className="flex items-center gap-1.5">
+                                        <Code2 className="w-3.5 h-3.5 text-nexo-400" />
+                                        <span className="text-surface-300 font-medium truncate">{fn.name}</span>
+                                      </div>
+                                      <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                        fn.status === 'active' 
+                                          ? 'bg-nexo-500/20 text-nexo-400' 
+                                          : 'bg-surface-700 text-surface-400'
+                                      }`}>
+                                        {fn.status === 'active' ? '运行中' : fn.status}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <code className="text-xs text-surface-500 font-mono">{fn.route}</code>
+                                      <div className="flex items-center gap-1">
+                                        {fn.methods.slice(0, 2).map((method) => (
+                                          <span
+                                            key={method}
+                                            className={`text-[10px] px-1 py-0.5 rounded ${
+                                              method === 'GET' ? 'bg-blue-500/20 text-blue-400' :
+                                              method === 'POST' ? 'bg-green-500/20 text-green-400' :
+                                              method === 'PUT' ? 'bg-yellow-500/20 text-yellow-400' :
+                                              method === 'DELETE' ? 'bg-red-500/20 text-red-400' :
+                                              'bg-surface-700 text-surface-400'
+                                            }`}
+                                          >
+                                            {method}
+                                          </span>
+                                        ))}
+                                        {fn.methods.length > 2 && (
+                                          <span className="text-[10px] text-surface-500">+{fn.methods.length - 2}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <a
+                                      href={`/functions/${fn.id}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-1 mt-1 text-xs text-surface-500 hover:text-nexo-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <ExternalLinkIcon className="w-3 h-3" />
+                                      查看详情
+                                    </a>
+                                  </div>
+                                ))}
+                                <div className="px-2 py-1.5 mx-1 mt-2 border-t border-surface-800/50">
+                                  <a
+                                    href="/functions/new"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center justify-center gap-1.5 w-full px-2 py-1.5 text-xs text-nexo-400 hover:text-nexo-300 hover:bg-surface-800 rounded transition-colors"
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                    创建新函数
+                                  </a>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* 拖拽分隔条 */}
+                {!isSidebarCollapsed && (
+                  <div
+                    onMouseDown={handleResizeStart}
+                    className={`w-1 cursor-col-resize bg-surface-800 hover:bg-surface-700 ${isResizing ? 'bg-nexo-500' : ''}`}
+                    title="拖拽调整宽度"
+                  />
+                )}
+                <div className="flex-1">
+                  {showCodeEditor ? (
+                    <FileEditor
+                      files={projectFiles}
+                      activeFile={activeFile}
+                      onFileSelect={setActiveFile}
+                      onFileChange={handleFileChange}
+                      onFileCreate={handleFileCreate}
+                      onFileDelete={handleFileDelete}
+                    />
+                  ) : (
+                    <WebContainerPreview
+                      ref={previewRef}
+                      files={projectFiles}
+                      projectType={projectType}
+                      isFullscreen={isFullscreen}
+                      onToggleFullscreen={() => setIsFullscreen(true)}
+                      controlsHidden
+                    />
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

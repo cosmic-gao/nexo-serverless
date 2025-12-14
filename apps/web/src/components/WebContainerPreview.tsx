@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { 
   Play, 
   RefreshCw, 
@@ -20,19 +20,32 @@ import {
 } from '../lib/webcontainer'
 import ParticleArrayLoader from './ParticleArrayLoader'
 
+export interface WebContainerPreviewHandle {
+  start: () => Promise<void>
+  stop: () => void
+  refresh: () => void
+  toggleLogs: (force?: boolean) => void
+  getStatus: () => WebContainerStatus
+  isRunning: () => boolean
+  canStop: () => boolean
+}
+
 interface WebContainerPreviewProps {
   files: ProjectFile[]
   projectType: ProjectType
   isFullscreen?: boolean
   onToggleFullscreen?: () => void
+  controlsHidden?: boolean
 }
 
-export default function WebContainerPreview({
-  files,
-  projectType,
-  isFullscreen = false,
-  onToggleFullscreen,
-}: WebContainerPreviewProps) {
+const WebContainerPreview = forwardRef<WebContainerPreviewHandle, WebContainerPreviewProps>(function WebContainerPreview(props, ref) {
+  const {
+    files,
+    projectType,
+    isFullscreen = false,
+    onToggleFullscreen,
+    controlsHidden = false,
+  } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const stopFnRef = useRef<(() => void) | null>(null)
   const hasStartedRef = useRef(false)
@@ -229,9 +242,20 @@ export default function WebContainerPreview({
 
   const canStop = status.state === 'ready' && projectType !== 'html'
 
+  useImperativeHandle(ref, () => ({
+    start: startViteProject,
+    stop: stopServer,
+    refresh,
+    toggleLogs: (force?: boolean) => setShowLogs(force ?? !showLogs),
+    getStatus: () => status,
+    isRunning: () => isRunning,
+    canStop: () => canStop,
+  }), [startViteProject, stopServer, refresh, showLogs, status, isRunning, canStop])
+
   return (
     <div className={`flex flex-col h-full ${isFullscreen ? 'fixed inset-0 z-50 bg-surface-950' : ''}`}>
       {/* Header */}
+      {!controlsHidden && (
       <div className="flex items-center justify-between px-4 py-3 border-b border-surface-700 bg-surface-900/50">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
@@ -316,6 +340,7 @@ export default function WebContainerPreview({
           )}
         </div>
       </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 relative overflow-hidden">
@@ -447,4 +472,6 @@ export default function WebContainerPreview({
       </div>
     </div>
   )
-}
+})
+
+export default WebContainerPreview
