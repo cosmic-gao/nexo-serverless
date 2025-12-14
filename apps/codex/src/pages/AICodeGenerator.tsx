@@ -1588,18 +1588,19 @@ export default function AICodeGenerator() {
         ) : (
           <div className="flex flex-col h-full relative z-10">
             {/* 1. AI 聊天区域 */}
-            <div className={`flex flex-col border-b border-surface-700/40 transition-all overflow-hidden relative ${isChatCollapsed ? '' : 'flex-1 min-h-0'}`}>
-              <div className="absolute inset-0 bg-gradient-to-br from-nexo-500/5 via-transparent to-transparent opacity-50 pointer-events-none" />
-              <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-nexo-500/10 via-nexo-500/5 to-transparent border-b border-surface-700/30 flex-shrink-0 backdrop-blur-sm relative z-10">
-                <span className="text-sm font-semibold text-white flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-nexo-500/30 to-nexo-500/10 border border-nexo-500/30 flex items-center justify-center shadow-md shadow-nexo-500/20">
-                    <Bot className="w-3.5 h-3.5 text-nexo-400" />
+            <div className={`flex flex-col border-b border-surface-700/30 transition-all overflow-hidden relative ${isChatCollapsed ? '' : 'flex-1 min-h-0'}`}>
+              <div className="absolute inset-0 bg-gradient-to-br from-nexo-500/8 via-nexo-500/3 to-transparent opacity-60 pointer-events-none" />
+              <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-nexo-500/15 via-nexo-500/8 to-transparent border-b border-nexo-500/20 flex-shrink-0 backdrop-blur-md relative z-10 shadow-[0_1px_0_0_rgba(34,197,94,0.1)]">
+                <span className="text-sm font-semibold text-white flex items-center gap-3">
+                  <div className="relative w-8 h-8 rounded-xl bg-gradient-to-br from-nexo-500/40 via-nexo-500/25 to-nexo-500/15 border border-nexo-500/40 flex items-center justify-center shadow-lg shadow-nexo-500/25 backdrop-blur-sm">
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent opacity-50" />
+                    <Bot className="w-4 h-4 text-nexo-300 relative z-10" />
                   </div>
-                  <span className="bg-gradient-to-r from-white via-nexo-100 to-surface-200 bg-clip-text text-transparent">AI 助手</span>
+                  <span className="bg-gradient-to-r from-white via-nexo-200 to-nexo-300 bg-clip-text text-transparent font-medium tracking-wide">AI 助手</span>
                 </span>
                 <button
                   onClick={() => setIsChatCollapsed(!isChatCollapsed)}
-                  className="px-2 py-1 text-xs text-surface-400 hover:text-white hover:bg-surface-800/60 rounded-md transition-all hover:scale-105"
+                  className="px-2.5 py-1.5 text-xs text-surface-400 hover:text-nexo-300 hover:bg-nexo-500/20 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 border border-transparent hover:border-nexo-500/30"
                   title={isChatCollapsed ? "展开聊天" : "折叠聊天"}
                 >
                   {isChatCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5 rotate-90" />}
@@ -1609,12 +1610,12 @@ export default function AICodeGenerator() {
                 <div className="flex-1 min-h-0 flex flex-col">
                   {/* 模板快捷聊天 */}
                   {chatMessages.length === 0 && (
-                    <div className="p-3 border-b border-surface-700/30 flex-shrink-0 bg-gradient-to-br from-surface-800/30 to-surface-900/30">
-                      <div className="text-xs text-surface-400 mb-2.5 flex items-center gap-2">
-                        <div className="w-0.5 h-3.5 bg-gradient-to-b from-nexo-400 to-nexo-600 rounded-full" />
-                        <span className="font-medium">快速模板</span>
+                    <div className="p-4 border-b border-surface-700/20 flex-shrink-0 bg-gradient-to-br from-surface-800/40 via-surface-800/30 to-surface-900/40 backdrop-blur-sm">
+                      <div className="text-xs text-surface-300 mb-3 flex items-center gap-2.5">
+                        <div className="w-1 h-4 bg-gradient-to-b from-nexo-400 via-nexo-500 to-nexo-600 rounded-full shadow-sm shadow-nexo-500/50" />
+                        <span className="font-semibold tracking-wide">快速模板</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-2 gap-2.5">
                         {quickPrompts.map((item) => (
                           <button
                             key={item.label}
@@ -1658,21 +1659,21 @@ export default function AICodeGenerator() {
                                 setIsGenerating(false)
                               }
                             }}
-                            className="relative overflow-hidden group p-2.5 bg-gradient-to-br from-surface-800/60 to-surface-800/40 hover:from-surface-700/70 hover:to-surface-700/50 border border-surface-700/50 hover:border-surface-600/70 rounded-lg text-left transition-all duration-300 hover:scale-[1.02] hover:shadow-md hover:shadow-nexo-500/10"
+                            className="relative overflow-hidden group p-3 bg-gradient-to-br from-surface-800/70 via-surface-800/50 to-surface-800/40 hover:from-surface-700/80 hover:via-surface-700/60 hover:to-surface-700/50 border border-surface-700/40 hover:border-surface-600/60 rounded-xl text-left transition-all duration-300 hover:scale-[1.03] hover:shadow-lg hover:shadow-nexo-500/20 backdrop-blur-sm"
                           >
-                            <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-15 transition-opacity duration-300`} />
-                            <div className="relative flex items-center gap-2.5">
-                              <span className="text-xl group-hover:scale-125 transition-transform duration-300">{item.icon}</span>
-                              <span className="text-xs font-semibold text-surface-200 group-hover:text-white transition-colors">{item.label}</span>
+                            <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-20 transition-opacity duration-300`} />
+                            <div className="relative flex items-center gap-3">
+                              <span className="text-2xl group-hover:scale-125 transition-transform duration-300 filter drop-shadow-sm">{item.icon}</span>
+                              <span className="text-xs font-semibold text-surface-200 group-hover:text-white transition-colors tracking-wide">{item.label}</span>
                             </div>
-                            <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${item.gradient} opacity-0 group-hover:opacity-100 transition-opacity`} />
+                            <div className={`absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r ${item.gradient} opacity-0 group-hover:opacity-100 transition-opacity rounded-b-xl`} />
                           </button>
                         ))}
                       </div>
                     </div>
                   )}
                   {/* 聊天面板 */}
-                  <div className="flex-1 min-h-0 p-2.5">
+                  <div className="flex-1 min-h-0 p-3">
                     <ChatPanel
                       messages={chatMessages}
                       isLoading={isGenerating}
@@ -1693,32 +1694,35 @@ export default function AICodeGenerator() {
             </div>
 
             {/* 2. 文件目录区域 */}
-            <div className={`flex flex-col border-b border-surface-700/40 transition-all overflow-hidden relative ${isFileListCollapsed ? '' : 'flex-1 min-h-0'}`}>
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent opacity-50 pointer-events-none" />
-              <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-transparent border-b border-surface-700/30 flex-shrink-0 backdrop-blur-sm relative z-10">
-                <span className="text-sm font-semibold text-white flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500/30 to-blue-500/10 border border-blue-500/30 flex items-center justify-center shadow-md shadow-blue-500/20">
-                    <FileCode className="w-3.5 h-3.5 text-blue-400" />
+            <div className={`flex flex-col border-b border-surface-700/30 transition-all overflow-hidden relative ${isFileListCollapsed ? '' : 'flex-1 min-h-0'}`}>
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/8 via-blue-500/3 to-transparent opacity-60 pointer-events-none" />
+              <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-500/15 via-blue-500/8 to-transparent border-b border-blue-500/20 flex-shrink-0 backdrop-blur-md relative z-10 shadow-[0_1px_0_0_rgba(59,130,246,0.1)]">
+                <span className="text-sm font-semibold text-white flex items-center gap-3">
+                  <div className="relative w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500/40 via-blue-500/25 to-blue-500/15 border border-blue-500/40 flex items-center justify-center shadow-lg shadow-blue-500/25 backdrop-blur-sm">
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent opacity-50" />
+                    <FileCode className="w-4 h-4 text-blue-300 relative z-10" />
                   </div>
-                  <span className="bg-gradient-to-r from-white via-blue-100 to-surface-200 bg-clip-text text-transparent">文件列表</span>
+                  <span className="bg-gradient-to-r from-white via-blue-200 to-blue-300 bg-clip-text text-transparent font-medium tracking-wide">文件列表</span>
                 </span>
                 <button
                   onClick={() => setIsFileListCollapsed(!isFileListCollapsed)}
-                  className="px-2 py-1 text-xs text-surface-400 hover:text-white hover:bg-surface-800/60 rounded-md transition-all hover:scale-105"
+                  className="px-2.5 py-1.5 text-xs text-surface-400 hover:text-blue-300 hover:bg-blue-500/20 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 border border-transparent hover:border-blue-500/30"
                   title={isFileListCollapsed ? "展开文件列表" : "折叠文件列表"}
                 >
                   {isFileListCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5 rotate-90" />}
                 </button>
               </div>
               {!isFileListCollapsed && (
-                <div className="flex-1 overflow-y-auto p-2.5 bg-gradient-to-b from-surface-900/20 to-transparent">
+                <div className="flex-1 overflow-y-auto p-3 bg-gradient-to-b from-surface-900/30 via-surface-900/20 to-transparent">
                   {projectFiles.length === 0 ? (
-                    <div className="px-2 py-6 text-center">
-                      <FileCode className="w-7 h-7 mx-auto mb-2 text-surface-600 opacity-50" />
-                      <div className="text-xs text-surface-500">暂无文件</div>
+                    <div className="px-2 py-8 text-center">
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-surface-800/50 flex items-center justify-center border border-surface-700/30">
+                        <FileCode className="w-6 h-6 text-surface-500 opacity-60" />
+                      </div>
+                      <div className="text-xs text-surface-400 font-medium">暂无文件</div>
                     </div>
                   ) : (
-                    <div className="space-y-0.5">
+                    <div className="space-y-1">
                       {buildFileTree(projectFiles).map(node => (
                         <FileTreeNodeComponent
                           key={node.path}
@@ -1739,38 +1743,43 @@ export default function AICodeGenerator() {
 
             {/* 3. Function 列表区域 */}
             <div className={`flex flex-col transition-all overflow-hidden relative ${isApiListCollapsed ? '' : 'flex-1 min-h-0'}`}>
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-transparent opacity-50 pointer-events-none" />
-              <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-purple-500/10 via-purple-500/5 to-transparent border-b border-surface-700/30 flex-shrink-0 backdrop-blur-sm relative z-10">
-                <span className="text-sm font-semibold text-white flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500/30 to-purple-500/10 border border-purple-500/30 flex items-center justify-center shadow-md shadow-purple-500/20">
-                    <Code2 className="w-3.5 h-3.5 text-purple-400" />
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/8 via-purple-500/3 to-transparent opacity-60 pointer-events-none" />
+              <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-500/15 via-purple-500/8 to-transparent border-b border-purple-500/20 flex-shrink-0 backdrop-blur-md relative z-10 shadow-[0_1px_0_0_rgba(168,85,247,0.1)]">
+                <span className="text-sm font-semibold text-white flex items-center gap-3">
+                  <div className="relative w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500/40 via-purple-500/25 to-purple-500/15 border border-purple-500/40 flex items-center justify-center shadow-lg shadow-purple-500/25 backdrop-blur-sm">
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent opacity-50" />
+                    <Code2 className="w-4 h-4 text-purple-300 relative z-10" />
                   </div>
-                  <span className="bg-gradient-to-r from-white via-purple-100 to-surface-200 bg-clip-text text-transparent">API 列表</span>
+                  <span className="bg-gradient-to-r from-white via-purple-200 to-purple-300 bg-clip-text text-transparent font-medium tracking-wide">API 列表</span>
                 </span>
                 <button
                   onClick={() => setIsApiListCollapsed(!isApiListCollapsed)}
-                  className="px-2 py-1 text-xs text-surface-400 hover:text-white hover:bg-surface-800/60 rounded-md transition-all hover:scale-105"
+                  className="px-2.5 py-1.5 text-xs text-surface-400 hover:text-purple-300 hover:bg-purple-500/20 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 border border-transparent hover:border-purple-500/30"
                   title={isApiListCollapsed ? "展开 API 列表" : "折叠 API 列表"}
                 >
                   {isApiListCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5 rotate-90" />}
                 </button>
               </div>
               {!isApiListCollapsed && (
-                <div className="flex-1 overflow-y-auto p-2.5 bg-gradient-to-b from-surface-900/20 to-transparent">
+                <div className="flex-1 overflow-y-auto p-3 bg-gradient-to-b from-surface-900/30 via-surface-900/20 to-transparent">
                   {functionsLoading ? (
-                    <div className="px-2 py-6 text-center">
-                      <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2.5 text-nexo-400" />
-                      <div className="text-xs text-surface-500">加载中...</div>
+                    <div className="px-2 py-8 text-center">
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-surface-800/50 flex items-center justify-center border border-surface-700/30">
+                        <Loader2 className="w-6 h-6 animate-spin text-nexo-400" />
+                      </div>
+                      <div className="text-xs text-surface-400 font-medium">加载中...</div>
                     </div>
                   ) : functions.length === 0 ? (
-                    <div className="px-2 py-6 text-center">
-                      <Code2 className="w-7 h-7 mx-auto mb-2 text-surface-600 opacity-50" />
-                      <div className="text-xs text-surface-500 mb-2.5">暂无函数</div>
+                    <div className="px-2 py-8 text-center">
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-surface-800/50 flex items-center justify-center border border-surface-700/30">
+                        <Code2 className="w-6 h-6 text-surface-500 opacity-60" />
+                      </div>
+                      <div className="text-xs text-surface-400 font-medium mb-3">暂无函数</div>
                       <a
                         href="/functions/new"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-nexo-400 hover:text-nexo-300 hover:bg-gradient-to-r hover:from-nexo-500/20 hover:to-nexo-500/10 rounded-md border border-nexo-500/30 hover:border-nexo-500/50 transition-all"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-nexo-400 hover:text-nexo-300 hover:bg-gradient-to-r hover:from-nexo-500/20 hover:to-nexo-500/10 rounded-lg border border-nexo-500/30 hover:border-nexo-500/50 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm hover:shadow-md hover:shadow-nexo-500/20"
                       >
                         <Plus className="w-3.5 h-3.5" />
                         创建函数
@@ -1786,64 +1795,70 @@ export default function AICodeGenerator() {
                             setViewMode('api')
                             setActiveFile(null)
                           }}
-                          className={`w-full px-2.5 py-2.5 rounded-lg border transition-all group text-left relative overflow-hidden ${
+                          className={`w-full px-3 py-3 rounded-xl border transition-all duration-200 group text-left relative overflow-hidden backdrop-blur-sm ${
                             selectedApi?.id === fn.id
-                              ? 'bg-gradient-to-r from-nexo-500/20 to-nexo-500/10 border-nexo-500/30 shadow-md shadow-nexo-500/10'
-                              : 'bg-gradient-to-br from-surface-800/50 to-surface-800/30 hover:from-surface-800/60 hover:to-surface-800/40 border-surface-700/30 hover:border-surface-600/50'
+                              ? 'bg-gradient-to-r from-nexo-500/25 via-nexo-500/15 to-nexo-500/10 border-nexo-500/40 shadow-lg shadow-nexo-500/20'
+                              : 'bg-gradient-to-br from-surface-800/60 via-surface-800/40 to-surface-800/30 hover:from-surface-800/70 hover:via-surface-800/50 hover:to-surface-800/40 border-surface-700/40 hover:border-surface-600/60 hover:shadow-md'
                           }`}
                         >
                           {selectedApi?.id === fn.id && (
-                            <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-nexo-400 to-nexo-600 rounded-r-full" />
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-nexo-400 via-nexo-500 to-nexo-600 rounded-r-full shadow-sm shadow-nexo-500/50" />
                           )}
-                          <div className="flex items-start justify-between mb-1.5">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <div className={`transition-transform group-hover:scale-110 ${selectedApi?.id === fn.id ? 'scale-110' : ''}`}>
-                                <Code2 className={`w-3.5 h-3.5 ${selectedApi?.id === fn.id ? 'text-nexo-400' : 'text-nexo-400/70'} flex-shrink-0`} />
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                              <div className={`transition-transform duration-200 group-hover:scale-110 ${selectedApi?.id === fn.id ? 'scale-110' : ''}`}>
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                                  selectedApi?.id === fn.id 
+                                    ? 'bg-nexo-500/20 border border-nexo-500/30' 
+                                    : 'bg-surface-700/50 border border-surface-700/30 group-hover:bg-surface-700/70'
+                                } transition-all`}>
+                                  <Code2 className={`w-4 h-4 ${selectedApi?.id === fn.id ? 'text-nexo-300' : 'text-nexo-400/70 group-hover:text-nexo-400'} flex-shrink-0`} />
+                                </div>
                               </div>
-                              <span className={`font-semibold text-xs truncate transition-colors ${
-                                selectedApi?.id === fn.id ? 'text-nexo-300' : 'text-surface-200 group-hover:text-white'
+                              <span className={`font-semibold text-sm truncate transition-colors ${
+                                selectedApi?.id === fn.id ? 'text-nexo-200' : 'text-surface-200 group-hover:text-white'
                               }`}>{fn.name}</span>
                             </div>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium flex-shrink-0 transition-all ${
+                            <span className={`text-[10px] px-2 py-1 rounded-lg font-semibold flex-shrink-0 transition-all ${
                               fn.status === 'active' 
-                                ? 'bg-nexo-500/20 text-nexo-300 border border-nexo-500/30' 
-                                : 'bg-surface-700 text-surface-400'
+                                ? 'bg-nexo-500/25 text-nexo-200 border border-nexo-500/40 shadow-sm shadow-nexo-500/20' 
+                                : 'bg-surface-700/60 text-surface-400 border border-surface-700/40'
                             }`}>
                               {fn.status === 'active' ? '运行中' : fn.status}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2.5 mb-1.5">
-                            <code className="text-[10px] text-surface-400 font-mono bg-surface-900/50 px-1.5 py-0.5 rounded border border-surface-700/50">{fn.route}</code>
-                            <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-2.5">
+                            <code className="text-[10px] text-surface-300 font-mono bg-surface-900/60 px-2 py-1 rounded-md border border-surface-700/50 backdrop-blur-sm">{fn.route}</code>
+                            <div className="flex items-center gap-1.5">
                               {fn.methods.slice(0, 3).map((method) => (
                                 <span
                                   key={method}
-                                  className={`text-[9px] px-1 py-0.5 rounded-md font-medium ${
-                                    method === 'GET' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
-                                    method === 'POST' ? 'bg-green-500/20 text-green-300 border border-green-500/30' :
-                                    method === 'PUT' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' :
-                                    method === 'DELETE' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
-                                    'bg-surface-700 text-surface-400'
+                                  className={`text-[9px] px-1.5 py-0.5 rounded-md font-semibold ${
+                                    method === 'GET' ? 'bg-blue-500/25 text-blue-200 border border-blue-500/40 shadow-sm shadow-blue-500/20' :
+                                    method === 'POST' ? 'bg-green-500/25 text-green-200 border border-green-500/40 shadow-sm shadow-green-500/20' :
+                                    method === 'PUT' ? 'bg-yellow-500/25 text-yellow-200 border border-yellow-500/40 shadow-sm shadow-yellow-500/20' :
+                                    method === 'DELETE' ? 'bg-red-500/25 text-red-200 border border-red-500/40 shadow-sm shadow-red-500/20' :
+                                    'bg-surface-700/60 text-surface-400 border border-surface-700/40'
                                   }`}
                                 >
                                   {method}
                                 </span>
                               ))}
                               {fn.methods.length > 3 && (
-                                <span className="text-[9px] text-surface-500">+{fn.methods.length - 3}</span>
+                                <span className="text-[9px] text-surface-500 font-medium">+{fn.methods.length - 3}</span>
                               )}
                             </div>
                           </div>
                         </button>
                       ))}
-                      <div className="px-2.5 py-2.5 mt-3 border-t border-surface-700/30">
+                      <div className="px-3 py-3 mt-4 border-t border-surface-700/30">
                         <a
                           href="/functions/new"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-medium text-nexo-400 hover:text-nexo-300 hover:bg-gradient-to-r hover:from-nexo-500/20 hover:to-nexo-500/10 rounded-lg border border-nexo-500/30 hover:border-nexo-500/50 transition-all"
+                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-xs font-semibold text-nexo-400 hover:text-nexo-300 hover:bg-gradient-to-r hover:from-nexo-500/25 hover:via-nexo-500/15 hover:to-nexo-500/10 rounded-xl border border-nexo-500/30 hover:border-nexo-500/50 transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-sm hover:shadow-md hover:shadow-nexo-500/20 backdrop-blur-sm"
                         >
-                          <Plus className="w-3.5 h-3.5" />
+                          <Plus className="w-4 h-4" />
                           创建新函数
                         </a>
                       </div>
