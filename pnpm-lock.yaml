@@ -128,7 +128,11 @@ importers:
 
   packages/config: {}
 
-  packages/types: {}
+  packages/types:
+    dependencies:
+      '@nexo/api':
+        specifier: workspace:*
+        version: link:../api
 
   packages/ui:
     dependencies:

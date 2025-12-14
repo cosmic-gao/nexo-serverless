@@ -1,40 +1,28 @@
 import { useState, useRef, useEffect } from 'react'
 import {
-  Sparkles,
-  Send,
-  Check,
-  Rocket,
-  MessageSquare,
   Loader2,
-  ExternalLink,
-  Trash2,
-  Download,
-  Wand2,
   Code,
-  Palette,
-  Zap,
   Bot,
-  User,
   Layers,
   Terminal,
   Maximize2,
-  Copy,
-  CheckCircle2,
   Play,
   RefreshCw,
   Square,
   ChevronRight,
   ChevronDown,
+  Plus,
+  Code2,
+  ExternalLink as ExternalLinkIcon,
+  Rocket,
+  Download,
   FileCode,
   FileJson,
   FileType,
-  File,
-  Plus,
-  Code2,
-  ExternalLink as ExternalLinkIcon
+  File
 } from 'lucide-react'
 import { api, Function } from '../lib/api'
-import { ProjectFile, ProjectType, getTemplate, allTemplates } from '../lib/projectTemplates'
+import { ProjectFile, ProjectType, getTemplate } from '../lib/projectTemplates'
 import WebContainerPreview, { WebContainerPreviewHandle } from '../components/WebContainerPreview'
 import FileEditor from '../components/FileEditor'
 import ChatPanel from '../components/ChatPanel'
@@ -1208,6 +1196,7 @@ const features = [{ icon: '🍃', title: 'Vue 3', desc: '组合式 API' }, { ico
 }
 
 
+
 // 文件列表相关类型和函数
 interface FileTreeNode {
   name: string
@@ -1287,15 +1276,17 @@ function FileTreeNodeComponent({
       <div>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-surface-800 rounded text-sm text-surface-300"
+          className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-surface-800/60 rounded-lg text-sm text-surface-300 hover:text-white transition-all group"
           style={{ paddingLeft: `${level * 12 + 8}px` }}
         >
-          {expanded ? (
-            <ChevronDown className="w-3.5 h-3.5 text-surface-500" />
-          ) : (
-            <ChevronRight className="w-3.5 h-3.5 text-surface-500" />
-          )}
-          <span>{node.name}</span>
+          <div className="transition-transform group-hover:scale-110">
+            {expanded ? (
+              <ChevronDown className="w-3.5 h-3.5 text-surface-500 group-hover:text-surface-400" />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5 text-surface-500 group-hover:text-surface-400" />
+            )}
+          </div>
+          <span className="font-medium">{node.name}</span>
         </button>
         {expanded && (
           <div>
@@ -1317,15 +1308,20 @@ function FileTreeNodeComponent({
   return (
     <button
       onClick={() => onFileSelect(node.path)}
-      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-sm transition-colors ${
+      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-all group relative ${
         activeFile === node.path
-          ? 'bg-nexo-500/20 text-nexo-400'
-          : 'text-surface-300 hover:bg-surface-800'
+          ? 'bg-gradient-to-r from-nexo-500/20 to-nexo-500/10 text-nexo-400 border border-nexo-500/30 shadow-lg shadow-nexo-500/10'
+          : 'text-surface-300 hover:bg-surface-800/60 hover:text-white border border-transparent'
       }`}
       style={{ paddingLeft: `${level * 12 + 8}px` }}
     >
-      {getFileIcon(node.name)}
-      <span className="truncate">{node.name}</span>
+      <div className={`transition-transform group-hover:scale-110 ${activeFile === node.path ? 'scale-110' : ''}`}>
+        {getFileIcon(node.name)}
+      </div>
+      <span className="truncate font-medium">{node.name}</span>
+      {activeFile === node.path && (
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-nexo-400 to-nexo-600 rounded-r-full" />
+      )}
     </button>
   )
 }
@@ -1343,15 +1339,21 @@ export default function AICodeGenerator() {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
-  const [projectType, setProjectType] = useState<ProjectType>('html')
-  const [projectFiles, setProjectFiles] = useState<ProjectFile[]>([])
-  const [activeFile, setActiveFile] = useState<string | null>(null)
-  const [showCodeEditor, setShowCodeEditor] = useState(false)
+  const [projectType] = useState<ProjectType>('react')
+  const [projectFiles, setProjectFiles] = useState<ProjectFile[]>(() => {
+    // 初始化时加载React模板
+    const template = getTemplate('react')
+    return template.files
+  })
+  const [activeFile, setActiveFile] = useState<string | null>(() => {
+    // 初始化时设置默认文件
+    const template = getTemplate('react')
+    return template.entryFile
+  })
+  const [selectedApi, setSelectedApi] = useState<Function | null>(null)
+  const [viewMode, setViewMode] = useState<'preview' | 'code' | 'api'>('preview')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
-  const [publishStatus, setPublishStatus] = useState('')
-  const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
-  const [urlCopied, setUrlCopied] = useState(false)
   const [_showChatPanel, _setShowChatPanel] = useState(true) // 保留用于未来功能
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [sidebarWidth, setSidebarWidth] = useState<number>(320)
@@ -1361,13 +1363,9 @@ export default function AICodeGenerator() {
   const [isApiListCollapsed, setIsApiListCollapsed] = useState<boolean>(false)
   const [functions, setFunctions] = useState<Function[]>([])
   const [functionsLoading, setFunctionsLoading] = useState<boolean>(false)
-  const [chatHeight, setChatHeight] = useState<number>(50) // 聊天面板高度百分比
   const [isResizing, setIsResizing] = useState<boolean>(false)
-  const [isResizingVertical, setIsResizingVertical] = useState<boolean>(false)
   const resizeStartXRef = useRef<number>(0)
-  const resizeStartYRef = useRef<number>(0)
   const startWidthRef = useRef<number>(320)
-  const startChatHeightRef = useRef<number>(50)
   const previewRef = useRef<WebContainerPreviewHandle>(null)
   const [canStopPreview, setCanStopPreview] = useState(false)
   const [_isPreviewRunning, setIsPreviewRunning] = useState(false) // isPreviewRunning 保留用于未来功能
@@ -1406,13 +1404,7 @@ export default function AICodeGenerator() {
     startWidthRef.current = sidebarWidth
   }
 
-  // 聊天和文件列表垂直拖拽
-  const handleVerticalResizeStart = (e: any) => {
-    setIsResizingVertical(true)
-    resizeStartYRef.current = e.clientY
-    startChatHeightRef.current = chatHeight
-  }
-
+  // 侧栏水平拖拽
   useEffect(() => {
     if (!isResizing) return
     const onMove = (e: MouseEvent) => {
@@ -1432,30 +1424,6 @@ export default function AICodeGenerator() {
       document.body.classList.remove('select-none')
     }
   }, [isResizing, sidebarWidth])
-
-  useEffect(() => {
-    if (!isResizingVertical) return
-    const onMove = (e: MouseEvent) => {
-      const container = document.querySelector('.sidebar-container') as HTMLElement
-      if (!container) return
-      const containerHeight = container.clientHeight
-      const delta = e.clientY - resizeStartYRef.current
-      const deltaPercent = (delta / containerHeight) * 100
-      const next = Math.min(90, Math.max(10, startChatHeightRef.current + deltaPercent))
-      setChatHeight(next)
-    }
-    const onUp = () => setIsResizingVertical(false)
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-    document.body.style.cursor = 'row-resize'
-    document.body.classList.add('select-none')
-    return () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-      document.body.style.cursor = ''
-      document.body.classList.remove('select-none')
-    }
-  }, [isResizingVertical, chatHeight])
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -1480,18 +1448,10 @@ export default function AICodeGenerator() {
       setMessages(prev => [...prev, assistantMessage])
       setProjectFiles(files)
       setActiveFile(files[0]?.path || null)
-      setPublishedUrl(null)
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: '抱歉，生成代码时出现错误，请重试。' }])
     } finally {
       setIsGenerating(false)
-    }
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      handleSendMessage()
     }
   }
 
@@ -1509,7 +1469,70 @@ export default function AICodeGenerator() {
     if (activeFile === path) setActiveFile(projectFiles[0]?.path || null)
   }
 
-  const downloadProject = () => {
+  // 模板快捷聊天
+  const quickPrompts = [
+    { icon: '🚀', label: 'Landing Page', prompt: '创建一个现代的产品着陆页', gradient: 'from-violet-500 to-purple-600' },
+    { icon: '📊', label: 'Dashboard', prompt: '创建一个数据仪表盘页面', gradient: 'from-blue-500 to-cyan-500' },
+    { icon: '🔐', label: '登录页面', prompt: '创建一个漂亮的登录表单', gradient: 'from-amber-500 to-orange-500' },
+    { icon: '✅', label: 'Todo 应用', prompt: '创建一个待办事项应用', gradient: 'from-emerald-500 to-teal-500' },
+  ]
+
+  // 发布功能
+  const handlePublish = async () => {
+    if (projectFiles.length === 0) {
+      alert('请先生成项目文件')
+      return
+    }
+    setIsPublishing(true)
+    try {
+      let filesToDeploy: { path: string; content: string }[] = []
+      
+      if (projectType === 'html') {
+        const htmlFile = projectFiles.find(f => f.path === 'index.html')
+        const cssFile = projectFiles.find(f => f.path === 'style.css')
+        const jsFile = projectFiles.find(f => f.path === 'main.js')
+        
+        let htmlContent = htmlFile?.content || ''
+        if (cssFile) htmlContent = htmlContent.replace(/<link[^>]*href=["']style\.css["'][^>]*>/gi, `<style>${cssFile.content}</style>`)
+        if (jsFile) htmlContent = htmlContent.replace(/<script[^>]*src=["']main\.js["'][^>]*><\/script>/gi, `<script>${jsFile.content}</script>`)
+        
+        filesToDeploy = [{ path: 'index.html', content: htmlContent }]
+      } else {
+        const { buildProject } = await import('../lib/webcontainer')
+        const buildResult = await buildProject(
+          projectFiles,
+          projectType,
+          () => {},
+          () => {}
+        )
+        
+        if (!buildResult.success) {
+          alert('构建失败: ' + (buildResult.error || '未知错误'))
+          return
+        }
+        
+        filesToDeploy = buildResult.files
+      }
+      
+      const res = await api.deploySite({ 
+        files: filesToDeploy,
+        project_type: projectType,
+      })
+      
+      if (res.success && res.data) {
+        alert(`发布成功！访问地址：${res.data.url}`)
+      } else {
+        alert('发布失败: ' + (res.error || '未知错误'))
+      }
+    } catch (err) {
+      alert('发布失败: ' + (err instanceof Error ? err.message : '未知错误'))
+    } finally {
+      setIsPublishing(false)
+    }
+  }
+
+  // 下载功能
+  const handleDownload = () => {
     if (projectType === 'html' && projectFiles.length > 0) {
       const htmlFile = projectFiles.find(f => f.path === 'index.html')
       if (htmlFile) {
@@ -1528,86 +1551,6 @@ export default function AICodeGenerator() {
     }
   }
 
-  const handlePublish = async () => {
-    if (projectFiles.length === 0) return
-    setIsPublishing(true)
-    setPublishStatus('正在准备发布...')
-    
-    try {
-      let filesToDeploy: { path: string; content: string }[] = []
-      
-      if (projectType === 'html') {
-        // HTML 项目：合并文件后发布
-        const htmlFile = projectFiles.find(f => f.path === 'index.html')
-        const cssFile = projectFiles.find(f => f.path === 'style.css')
-        const jsFile = projectFiles.find(f => f.path === 'main.js')
-        
-        let htmlContent = htmlFile?.content || ''
-        if (cssFile) htmlContent = htmlContent.replace(/<link[^>]*href=["']style\.css["'][^>]*>/gi, `<style>${cssFile.content}</style>`)
-        if (jsFile) htmlContent = htmlContent.replace(/<script[^>]*src=["']main\.js["'][^>]*><\/script>/gi, `<script>${jsFile.content}</script>`)
-        
-        filesToDeploy = [{ path: 'index.html', content: htmlContent }]
-      } else {
-        // React/Vue 项目需要先构建
-        setPublishStatus('正在构建项目...')
-        
-        const { buildProject } = await import('../lib/webcontainer')
-        
-        const buildResult = await buildProject(
-          projectFiles,
-          projectType,
-          (status) => {
-            setPublishStatus(status.message)
-          },
-          (_log) => {
-            // Build log handler
-          }
-        )
-        
-        if (!buildResult.success) {
-          alert('构建失败: ' + (buildResult.error || '未知错误'))
-          setPublishStatus('')
-          return
-        }
-        
-        filesToDeploy = buildResult.files
-        setPublishStatus(`构建完成，共 ${filesToDeploy.length} 个文件，正在部署...`)
-      }
-      
-      // 使用静态站点 API 部署
-      const res = await api.deploySite({ 
-        files: filesToDeploy,
-        project_type: projectType,
-      })
-      
-      if (res.success && res.data) {
-        setPublishedUrl(res.data.url)
-        setPublishStatus('')
-      } else {
-        alert('部署失败: ' + (res.error || '未知错误'))
-        setPublishStatus('')
-      }
-    } catch (err) {
-      alert('发布失败: ' + (err instanceof Error ? err.message : '未知错误'))
-      setPublishStatus('')
-    } finally {
-      setIsPublishing(false)
-    }
-  }
-
-  const clearProject = () => {
-    setMessages([])
-    setProjectFiles([])
-    setActiveFile(null)
-    setPublishedUrl(null)
-  }
-
-  const quickPrompts = [
-    { icon: '🚀', label: 'Landing Page', prompt: '创建一个现代的产品着陆页', gradient: 'from-violet-500 to-purple-600' },
-    { icon: '📊', label: 'Dashboard', prompt: '创建一个数据仪表盘页面', gradient: 'from-blue-500 to-cyan-500' },
-    { icon: '🔐', label: '登录页面', prompt: '创建一个漂亮的登录表单', gradient: 'from-amber-500 to-orange-500' },
-    { icon: '✅', label: 'Todo 应用', prompt: '创建一个待办事项应用', gradient: 'from-emerald-500 to-teal-500' },
-  ]
 
   if (isFullscreen) {
     return (
@@ -1623,712 +1566,658 @@ export default function AICodeGenerator() {
   }
 
   return (
-    <div className="pt-16 pb-4 min-h-screen relative overflow-hidden">
-      {/* 背景装饰 - 现代简洁风格 */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        {/* 柔和的渐变背景 */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] bg-gradient-to-b from-nexo-500/8 via-emerald-500/5 to-transparent rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-gradient-to-tl from-blue-500/6 to-cyan-500/4 rounded-full blur-3xl" />
-      </div>
-
-      <div className="max-w-[1920px] mx-auto px-6 relative">
-        {/* Header - 更宽松的布局 */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            {/* Logo 图标 - 简洁现代 */}
-            <div className="relative group">
-              <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-nexo-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-nexo-500/20 group-hover:shadow-xl group-hover:shadow-nexo-500/30 transition-all duration-300 group-hover:scale-105">
-                <Wand2 className="w-6 h-6 text-white" />
-              </div>
-            </div>
-            
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-3xl font-bold tracking-tight text-white">
-                  AI 代码生成器
-                </h1>
-                <span className="px-2.5 py-0.5 bg-nexo-500/10 border border-nexo-500/20 rounded-md text-[10px] font-medium text-nexo-400 uppercase tracking-wider">
-                  Live
+    <div className="fixed inset-0 h-screen w-screen overflow-hidden bg-surface-950 flex m-0 p-0">
+      {/* 左侧边栏 - 3个可折叠区域 */}
+      <div className="h-full border-r border-surface-700/40 bg-gradient-to-b from-surface-900/90 via-surface-900/80 to-surface-900/90 backdrop-blur-xl flex flex-col sidebar-container shadow-2xl shadow-black/30 relative" style={{ width: isSidebarCollapsed ? 12 : sidebarWidth, minWidth: isSidebarCollapsed ? 8 : 280 }}>
+        {/* 背景装饰 */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-0 left-0 w-64 h-64 bg-nexo-500/5 rounded-full blur-3xl" />
+          <div className="absolute top-1/3 right-0 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-56 h-56 bg-purple-500/5 rounded-full blur-3xl" />
+        </div>
+        {isSidebarCollapsed ? (
+          <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-surface-900/80 to-surface-900/60">
+            <button
+              onClick={() => setIsSidebarCollapsed(false)}
+              className="w-8 h-8 rounded-lg bg-gradient-to-br from-nexo-500/20 to-nexo-500/10 hover:from-nexo-500/30 hover:to-nexo-500/20 border border-nexo-500/30 hover:border-nexo-500/50 text-nexo-400 hover:text-nexo-300 text-xs transition-all shadow-lg shadow-nexo-500/10 hover:shadow-nexo-500/20"
+              title="展开侧边栏"
+            >
+              ▶
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col h-full relative z-10">
+            {/* 1. AI 聊天区域 */}
+            <div className={`flex flex-col border-b border-surface-700/40 transition-all overflow-hidden relative ${isChatCollapsed ? '' : 'flex-1 min-h-0'}`}>
+              <div className="absolute inset-0 bg-gradient-to-br from-nexo-500/5 via-transparent to-transparent opacity-50 pointer-events-none" />
+              <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-nexo-500/10 via-nexo-500/5 to-transparent border-b border-surface-700/30 flex-shrink-0 backdrop-blur-sm relative z-10">
+                <span className="text-sm font-semibold text-white flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-nexo-500/30 to-nexo-500/10 border border-nexo-500/30 flex items-center justify-center shadow-md shadow-nexo-500/20">
+                    <Bot className="w-3.5 h-3.5 text-nexo-400" />
+                  </div>
+                  <span className="bg-gradient-to-r from-white via-nexo-100 to-surface-200 bg-clip-text text-transparent">AI 助手</span>
                 </span>
-              </div>
-              <p className="text-surface-400 text-sm flex items-center gap-1.5">
-                <Terminal className="w-3.5 h-3.5" />
-                描述您的想法，AI 将为您生成完整的前端项目
-              </p>
-            </div>
-          </div>
-          
-          {/* 右侧快捷入口 */}
-          <div className="hidden lg:flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-800/50 rounded-lg border border-surface-700/50">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs text-surface-400">WebContainer 运行中</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 项目类型选择器 - 更宽松的布局 */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="flex items-center gap-1.5 text-surface-500 text-xs">
-            <Layers className="w-3.5 h-3.5" />
-            <span>类型</span>
-          </div>
-          <div className="flex items-center gap-2 p-1 bg-surface-900/80 rounded-xl border border-surface-700/50">
-          {allTemplates.map(template => {
-            const config = projectTypeConfig[template.type]
-            const isActive = projectType === template.type
-            return (
-              <button
-                key={template.type}
-                onClick={() => {
-                  setProjectType(template.type)
-                  if (projectFiles.length === 0) {
-                    setProjectFiles(template.files)
-                    setActiveFile(template.entryFile)
-                  }
-                }}
-                className={`relative group flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 overflow-hidden ${
-                  isActive 
-                    ? 'text-white shadow-xl' 
-                    : 'text-surface-400 hover:text-white hover:bg-surface-800/60'
-                }`}
-              >
-                {/* 活跃状态的背景 */}
-                {isActive && (
-                  <div className={`absolute inset-0 bg-gradient-to-r ${config.color} rounded-xl opacity-90`} />
-                )}
-                
-                <span className="relative text-lg group-hover:scale-110 transition-transform">{config.icon}</span>
-                <span className="relative font-medium text-sm">{config.label}</span>
-              </button>
-            )
-          })}
-          </div>
-          
-          {/* 分隔线 */}
-          <div className="h-6 w-px bg-surface-700/50" />
-          
-          {/* 快速模板按钮 */}
-          <div className="hidden md:flex items-center gap-2">
-            {quickPrompts.slice(0, 3).map((item) => (
-              <button
-                key={item.label}
-                onClick={() => {
-                  setInputValue(item.prompt)
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-800/50 hover:bg-surface-700/60 border border-surface-700/50 hover:border-surface-600 rounded-lg text-sm text-surface-400 hover:text-white transition-all group"
-              >
-                <span className="group-hover:scale-110 transition-transform">{item.icon}</span>
-                <span className="hidden xl:inline">{item.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 发布成功提示 - 紧凑但醒目 */}
-        {publishedUrl && (
-          <div className="relative overflow-hidden glass rounded-xl p-4 mb-4 border border-nexo-500/50 animate-fade-in">
-            {/* 背景光效 */}
-            <div className="absolute inset-0 bg-gradient-to-r from-nexo-500/15 to-emerald-500/15" />
-            <div className="absolute -right-10 -top-10 w-32 h-32 bg-nexo-500/30 rounded-full blur-2xl" />
-            
-            <div className="relative flex items-center gap-4">
-              <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-nexo-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-nexo-500/40 flex-shrink-0">
-                <CheckCircle2 className="w-6 h-6 text-white" />
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                    <div className="text-white font-bold flex items-center gap-2">
-                      🎉 发布成功!
-                    </div>
-                <code className="text-nexo-400 text-xs font-mono truncate max-w-[300px]">{publishedUrl}</code>
-              </div>
-              
-              <div className="flex items-center gap-2 ml-auto flex-shrink-0">
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(publishedUrl)
-                    setUrlCopied(true)
-                    setTimeout(() => setUrlCopied(false), 2000)
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-all text-sm font-medium ${
-                    urlCopied 
-                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-                      : 'bg-surface-800 hover:bg-surface-700 text-surface-300 hover:text-white border border-surface-600'
-                  }`}
+                  onClick={() => setIsChatCollapsed(!isChatCollapsed)}
+                  className="px-2 py-1 text-xs text-surface-400 hover:text-white hover:bg-surface-800/60 rounded-md transition-all hover:scale-105"
+                  title={isChatCollapsed ? "展开聊天" : "折叠聊天"}
                 >
-                  {urlCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  <span className="hidden sm:inline">{urlCopied ? '已复制' : '复制'}</span>
+                  {isChatCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5 rotate-90" />}
                 </button>
-                <a
-                  href={publishedUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-nexo-500 to-emerald-500 hover:from-nexo-600 hover:to-emerald-600 text-white font-medium rounded-lg transition-all hover:shadow-lg hover:shadow-nexo-500/30 text-sm"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                  访问
-                </a>
               </div>
+              {!isChatCollapsed && (
+                <div className="flex-1 min-h-0 flex flex-col">
+                  {/* 模板快捷聊天 */}
+                  {chatMessages.length === 0 && (
+                    <div className="p-3 border-b border-surface-700/30 flex-shrink-0 bg-gradient-to-br from-surface-800/30 to-surface-900/30">
+                      <div className="text-xs text-surface-400 mb-2.5 flex items-center gap-2">
+                        <div className="w-0.5 h-3.5 bg-gradient-to-b from-nexo-400 to-nexo-600 rounded-full" />
+                        <span className="font-medium">快速模板</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {quickPrompts.map((item) => (
+                          <button
+                            key={item.label}
+                            onClick={async () => {
+                              const userMessage: Message = { role: 'user', content: item.prompt }
+                              setMessages(prev => [...prev, userMessage])
+                              setChatMessages(prev => [...prev, {
+                                id: Date.now().toString(),
+                                role: 'user',
+                                content: item.prompt,
+                                timestamp: new Date()
+                              }])
+                              setInputValue('')
+                              setIsGenerating(true)
+
+                              try {
+                                const files = await generateCodeWithAI(item.prompt, projectType, projectFiles)
+                                const assistantMessage: Message = {
+                                  role: 'assistant',
+                                  content: `✨ 已生成 ${projectTypeConfig[projectType].label} 项目！共 ${files.length} 个文件。您可以在右侧预览效果，或切换到"代码"标签编辑代码。`,
+                                }
+                                setMessages(prev => [...prev, assistantMessage])
+                                setChatMessages(prev => [...prev, {
+                                  id: (Date.now() + 1).toString(),
+                                  role: 'assistant',
+                                  content: assistantMessage.content,
+                                  timestamp: new Date()
+                                }])
+                                setProjectFiles(files)
+                                setActiveFile(files[0]?.path || null)
+                              } catch {
+                                const errorMessage: Message = { role: 'assistant', content: '抱歉，生成代码时出现错误，请重试。' }
+                                setMessages(prev => [...prev, errorMessage])
+                                setChatMessages(prev => [...prev, {
+                                  id: (Date.now() + 1).toString(),
+                                  role: 'assistant',
+                                  content: errorMessage.content,
+                                  timestamp: new Date()
+                                }])
+                              } finally {
+                                setIsGenerating(false)
+                              }
+                            }}
+                            className="relative overflow-hidden group p-2.5 bg-gradient-to-br from-surface-800/60 to-surface-800/40 hover:from-surface-700/70 hover:to-surface-700/50 border border-surface-700/50 hover:border-surface-600/70 rounded-lg text-left transition-all duration-300 hover:scale-[1.02] hover:shadow-md hover:shadow-nexo-500/10"
+                          >
+                            <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-15 transition-opacity duration-300`} />
+                            <div className="relative flex items-center gap-2.5">
+                              <span className="text-xl group-hover:scale-125 transition-transform duration-300">{item.icon}</span>
+                              <span className="text-xs font-semibold text-surface-200 group-hover:text-white transition-colors">{item.label}</span>
+                            </div>
+                            <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r ${item.gradient} opacity-0 group-hover:opacity-100 transition-opacity`} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* 聊天面板 */}
+                  <div className="flex-1 min-h-0 p-2.5">
+                    <ChatPanel
+                      messages={chatMessages}
+                      isLoading={isGenerating}
+                      onMessageSubmit={(message) => {
+                        setChatMessages(prev => [...prev, {
+                          id: Date.now().toString(),
+                          role: 'user',
+                          content: message,
+                          timestamp: new Date()
+                        }])
+                        setInputValue(message)
+                        handleSendMessage()
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 2. 文件目录区域 */}
+            <div className={`flex flex-col border-b border-surface-700/40 transition-all overflow-hidden relative ${isFileListCollapsed ? '' : 'flex-1 min-h-0'}`}>
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent opacity-50 pointer-events-none" />
+              <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-transparent border-b border-surface-700/30 flex-shrink-0 backdrop-blur-sm relative z-10">
+                <span className="text-sm font-semibold text-white flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500/30 to-blue-500/10 border border-blue-500/30 flex items-center justify-center shadow-md shadow-blue-500/20">
+                    <FileCode className="w-3.5 h-3.5 text-blue-400" />
+                  </div>
+                  <span className="bg-gradient-to-r from-white via-blue-100 to-surface-200 bg-clip-text text-transparent">文件列表</span>
+                </span>
+                <button
+                  onClick={() => setIsFileListCollapsed(!isFileListCollapsed)}
+                  className="px-2 py-1 text-xs text-surface-400 hover:text-white hover:bg-surface-800/60 rounded-md transition-all hover:scale-105"
+                  title={isFileListCollapsed ? "展开文件列表" : "折叠文件列表"}
+                >
+                  {isFileListCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5 rotate-90" />}
+                </button>
+              </div>
+              {!isFileListCollapsed && (
+                <div className="flex-1 overflow-y-auto p-2.5 bg-gradient-to-b from-surface-900/20 to-transparent">
+                  {projectFiles.length === 0 ? (
+                    <div className="px-2 py-6 text-center">
+                      <FileCode className="w-7 h-7 mx-auto mb-2 text-surface-600 opacity-50" />
+                      <div className="text-xs text-surface-500">暂无文件</div>
+                    </div>
+                  ) : (
+                    <div className="space-y-0.5">
+                      {buildFileTree(projectFiles).map(node => (
+                        <FileTreeNodeComponent
+                          key={node.path}
+                          node={node}
+                          activeFile={activeFile}
+                          onFileSelect={(path) => {
+                            setActiveFile(path)
+                            setViewMode('code')
+                            setSelectedApi(null)
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 3. Function 列表区域 */}
+            <div className={`flex flex-col transition-all overflow-hidden relative ${isApiListCollapsed ? '' : 'flex-1 min-h-0'}`}>
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-transparent opacity-50 pointer-events-none" />
+              <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-purple-500/10 via-purple-500/5 to-transparent border-b border-surface-700/30 flex-shrink-0 backdrop-blur-sm relative z-10">
+                <span className="text-sm font-semibold text-white flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500/30 to-purple-500/10 border border-purple-500/30 flex items-center justify-center shadow-md shadow-purple-500/20">
+                    <Code2 className="w-3.5 h-3.5 text-purple-400" />
+                  </div>
+                  <span className="bg-gradient-to-r from-white via-purple-100 to-surface-200 bg-clip-text text-transparent">API 列表</span>
+                </span>
+                <button
+                  onClick={() => setIsApiListCollapsed(!isApiListCollapsed)}
+                  className="px-2 py-1 text-xs text-surface-400 hover:text-white hover:bg-surface-800/60 rounded-md transition-all hover:scale-105"
+                  title={isApiListCollapsed ? "展开 API 列表" : "折叠 API 列表"}
+                >
+                  {isApiListCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5 rotate-90" />}
+                </button>
+              </div>
+              {!isApiListCollapsed && (
+                <div className="flex-1 overflow-y-auto p-2.5 bg-gradient-to-b from-surface-900/20 to-transparent">
+                  {functionsLoading ? (
+                    <div className="px-2 py-6 text-center">
+                      <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2.5 text-nexo-400" />
+                      <div className="text-xs text-surface-500">加载中...</div>
+                    </div>
+                  ) : functions.length === 0 ? (
+                    <div className="px-2 py-6 text-center">
+                      <Code2 className="w-7 h-7 mx-auto mb-2 text-surface-600 opacity-50" />
+                      <div className="text-xs text-surface-500 mb-2.5">暂无函数</div>
+                      <a
+                        href="/functions/new"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-nexo-400 hover:text-nexo-300 hover:bg-gradient-to-r hover:from-nexo-500/20 hover:to-nexo-500/10 rounded-md border border-nexo-500/30 hover:border-nexo-500/50 transition-all"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        创建函数
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {functions.map((fn) => (
+                        <button
+                          key={fn.id}
+                          onClick={() => {
+                            setSelectedApi(fn)
+                            setViewMode('api')
+                            setActiveFile(null)
+                          }}
+                          className={`w-full px-2.5 py-2.5 rounded-lg border transition-all group text-left relative overflow-hidden ${
+                            selectedApi?.id === fn.id
+                              ? 'bg-gradient-to-r from-nexo-500/20 to-nexo-500/10 border-nexo-500/30 shadow-md shadow-nexo-500/10'
+                              : 'bg-gradient-to-br from-surface-800/50 to-surface-800/30 hover:from-surface-800/60 hover:to-surface-800/40 border-surface-700/30 hover:border-surface-600/50'
+                          }`}
+                        >
+                          {selectedApi?.id === fn.id && (
+                            <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-nexo-400 to-nexo-600 rounded-r-full" />
+                          )}
+                          <div className="flex items-start justify-between mb-1.5">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              <div className={`transition-transform group-hover:scale-110 ${selectedApi?.id === fn.id ? 'scale-110' : ''}`}>
+                                <Code2 className={`w-3.5 h-3.5 ${selectedApi?.id === fn.id ? 'text-nexo-400' : 'text-nexo-400/70'} flex-shrink-0`} />
+                              </div>
+                              <span className={`font-semibold text-xs truncate transition-colors ${
+                                selectedApi?.id === fn.id ? 'text-nexo-300' : 'text-surface-200 group-hover:text-white'
+                              }`}>{fn.name}</span>
+                            </div>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium flex-shrink-0 transition-all ${
+                              fn.status === 'active' 
+                                ? 'bg-nexo-500/20 text-nexo-300 border border-nexo-500/30' 
+                                : 'bg-surface-700 text-surface-400'
+                            }`}>
+                              {fn.status === 'active' ? '运行中' : fn.status}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2.5 mb-1.5">
+                            <code className="text-[10px] text-surface-400 font-mono bg-surface-900/50 px-1.5 py-0.5 rounded border border-surface-700/50">{fn.route}</code>
+                            <div className="flex items-center gap-1">
+                              {fn.methods.slice(0, 3).map((method) => (
+                                <span
+                                  key={method}
+                                  className={`text-[9px] px-1 py-0.5 rounded-md font-medium ${
+                                    method === 'GET' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
+                                    method === 'POST' ? 'bg-green-500/20 text-green-300 border border-green-500/30' :
+                                    method === 'PUT' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' :
+                                    method === 'DELETE' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                                    'bg-surface-700 text-surface-400'
+                                  }`}
+                                >
+                                  {method}
+                                </span>
+                              ))}
+                              {fn.methods.length > 3 && (
+                                <span className="text-[9px] text-surface-500">+{fn.methods.length - 3}</span>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                      <div className="px-2.5 py-2.5 mt-3 border-t border-surface-700/30">
+                        <a
+                          href="/functions/new"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-1.5 w-full px-3 py-2 text-xs font-medium text-nexo-400 hover:text-nexo-300 hover:bg-gradient-to-r hover:from-nexo-500/20 hover:to-nexo-500/10 rounded-lg border border-nexo-500/30 hover:border-nexo-500/50 transition-all"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          创建新函数
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 折叠侧边栏按钮 */}
+            <div className="px-4 py-2.5 border-t border-surface-700/30 flex-shrink-0 bg-surface-900/50">
+              <button
+                onClick={() => setIsSidebarCollapsed(true)}
+                className="w-full px-2.5 py-1.5 text-xs text-surface-400 hover:text-white hover:bg-gradient-to-r hover:from-surface-800/60 hover:to-surface-800/40 rounded-md text-center transition-all border border-surface-700/30 hover:border-surface-600/50"
+                title="折叠侧边栏"
+              >
+                <div className="flex items-center justify-center gap-1.5">
+                  <span>◀</span>
+                  <span className="hidden group-hover:inline">收起</span>
+                </div>
+              </button>
             </div>
           </div>
         )}
+      </div>
 
-        {/* 主内容区域 - 改进布局结构 */}
-        <div className="grid grid-cols-1 gap-6">
-          {/* 左侧面板 - AI 对话 (占 4 列) */}
-          <div className="hidden">
-            {/* 标题栏 - 更紧凑 */}
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-surface-700/50 bg-surface-900/70">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
-                </div>
-                <div className="h-3 w-px bg-surface-700 mx-1" />
-                <MessageSquare className="w-3.5 h-3.5 text-nexo-400" />
-                <span className="text-xs text-surface-300 font-medium">AI 助手</span>
-              </div>
+      {/* 拖拽分隔条 */}
+      {!isSidebarCollapsed && (
+        <div
+          onMouseDown={handleResizeStart}
+          className={`w-2 cursor-col-resize bg-surface-700/30 hover:bg-surface-600/50 transition-colors ${isResizing ? 'bg-nexo-500' : ''}`}
+          title="拖拽调整宽度"
+        />
+      )}
+
+      {/* 主内容区域 */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* 顶部操作区域 */}
+        <div className="flex items-center justify-between border-b border-surface-700/40 bg-surface-900/60 backdrop-blur-sm px-4 py-3 flex-shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
+              <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
+            </div>
+            <div className="h-4 w-px bg-surface-700/50" />
+
+            {/* 切换标签 */}
+            <div className="flex items-center gap-2">
               <button
-                onClick={clearProject}
-                className="p-1.5 hover:bg-surface-700/80 rounded-md transition-colors text-surface-400 hover:text-red-400 group"
-                title="清空项目"
+                onClick={() => {
+                  setViewMode('preview')
+                  setSelectedApi(null)
+                }}
+                className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all rounded-xl ${
+                  viewMode === 'preview'
+                    ? 'text-white bg-gradient-to-r from-nexo-500/20 to-nexo-500/10 border border-nexo-500/30 shadow-lg shadow-nexo-500/10' 
+                    : 'text-surface-400 hover:text-white hover:bg-surface-800/40'
+                }`}
               >
-                <Trash2 className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                <Layers className="w-4 h-4" />
+                <span>预览</span>
               </button>
-            </div>
-
-            {/* 内容区 */}
-            <div className="flex-1 overflow-hidden">
-              <div className="flex flex-col h-full">
-                  {/* 消息列表 */}
-                  <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-6 space-y-5">
-                    {messages.length === 0 ? (
-                      <div className="h-full flex flex-col items-center justify-center text-center p-6">
-                        {/* 空状态插画 */}
-                        <div className="relative mb-8">
-                          <div className="absolute inset-0 bg-gradient-to-br from-nexo-500/20 to-purple-500/20 rounded-full blur-2xl scale-150" />
-                          <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-surface-800 to-surface-900 border border-surface-700/50 flex items-center justify-center">
-                            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-nexo-500/20 to-purple-500/20 flex items-center justify-center">
-                              <Sparkles className="w-10 h-10 text-nexo-400" />
-                          </div>
-                            <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg animate-bounce" style={{ animationDuration: '2s' }}>
-                              <Zap className="w-4 h-4 text-white" />
-                        </div>
-                            <div className="absolute -bottom-1 -left-1 w-6 h-6 rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shadow-lg animate-bounce" style={{ animationDuration: '2.5s', animationDelay: '0.5s' }}>
-                              <Code className="w-3 h-3 text-white" />
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <h3 className="text-2xl font-bold text-white mb-3">开始创作</h3>
-                        <p className="text-surface-400 max-w-sm mb-10">
-                          描述您想要的页面设计，AI 将智能生成完整的代码
-                        </p>
-                        
-                        {/* 快速提示 - 更吸引人的卡片 */}
-                        <div className="w-full max-w-md">
-                          <div className="text-xs text-surface-500 mb-4 flex items-center gap-2 justify-center">
-                            <Palette className="w-3.5 h-3.5" />
-                            快速模板
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            {quickPrompts.map((item) => (
-                              <button
-                                key={item.label}
-                                onClick={() => setInputValue(item.prompt)}
-                                className="relative overflow-hidden group p-4 bg-surface-800/50 hover:bg-surface-700/60 border border-surface-700/50 hover:border-surface-600 rounded-xl text-left transition-all duration-300"
-                              >
-                                {/* 悬停时的渐变背景 */}
-                                <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-10 transition-opacity`} />
-                                
-                                <div className="relative flex items-center gap-3">
-                                  <span className="text-2xl group-hover:scale-125 transition-transform duration-300">{item.icon}</span>
-                                  <span className="text-sm font-medium text-surface-300 group-hover:text-white transition-colors">{item.label}</span>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      messages.map((message, index) => (
-                        <div
-                          key={index}
-                          className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
-                          style={{ animationDelay: `${index * 50}ms` }}
-                        >
-                          {message.role === 'assistant' && (
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-nexo-500 to-emerald-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-nexo-500/20">
-                              <Bot className="w-5 h-5 text-white" />
-                            </div>
-                          )}
-                          <div
-                            className={`max-w-[80%] rounded-2xl px-5 py-3.5 ${
-                              message.role === 'user'
-                                ? 'bg-gradient-to-r from-nexo-500 to-emerald-500 text-white shadow-lg shadow-nexo-500/20'
-                                : 'bg-surface-800/80 text-surface-200 border border-surface-700/50'
-                            }`}
-                          >
-                            <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
-                          </div>
-                          {message.role === 'user' && (
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-surface-700 to-surface-800 flex items-center justify-center flex-shrink-0 border border-surface-600">
-                              <User className="w-5 h-5 text-surface-300" />
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    )}
-
-                    {/* 生成中状态 */}
-                    {isGenerating && (
-                      <div className="flex gap-3 animate-fade-in">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-nexo-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-nexo-500/20">
-                          <Bot className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="bg-surface-800/80 rounded-2xl px-5 py-4 border border-surface-700/50">
-                          <div className="flex items-center gap-4 text-surface-300">
-                            <div className="flex gap-1.5">
-                              <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-nexo-400 to-emerald-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                              <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-nexo-400 to-emerald-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                              <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-nexo-400 to-emerald-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-                            </div>
-                            <span className="text-sm font-medium">AI 正在生成代码...</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 输入区 - 更精致的设计 */}
-                  <div className="p-4 border-t border-surface-700/50 bg-surface-900/50">
-                    {/* 快捷操作栏 - 类似 Teams 风格 */}
-                    {projectFiles.length > 0 && (
-                      <div className="flex items-center gap-2 mb-3 pb-3 border-b border-surface-700/30">
-                        <button
-                          onClick={handlePublish}
-                          disabled={isPublishing}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-nexo-500/20 to-emerald-500/20 hover:from-nexo-500/30 hover:to-emerald-500/30 text-nexo-400 hover:text-nexo-300 text-sm rounded-lg transition-all border border-nexo-500/30 hover:border-nexo-500/50 disabled:opacity-50"
-                          title={publishStatus || '发布到线上'}
-                        >
-                          {isPublishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Rocket className="w-3.5 h-3.5" />}
-                          <span>{isPublishing ? '发布中...' : '发布'}</span>
-                        </button>
-                        <button
-                          onClick={downloadProject}
-                          className="flex items-center gap-2 px-3 py-1.5 bg-surface-800/60 hover:bg-surface-700/80 text-surface-400 hover:text-white text-sm rounded-lg transition-all border border-surface-700/50 hover:border-surface-600"
-                          title="下载项目文件"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          <span>下载</span>
-                        </button>
-                        <div className="flex-1" />
-                        <span className="text-xs text-surface-500">
-                          {projectFiles.length} 个文件
-                        </span>
-                      </div>
-                    )}
-                    
-                    {/* 输入框 */}
-                    <div className="flex gap-3">
-                      <div className="flex-1 relative group">
-                        <textarea
-                          value={inputValue}
-                          onChange={(e) => setInputValue(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                          placeholder="描述您想要的页面设计..."
-                          rows={2}
-                          className="w-full px-4 py-3 bg-surface-800/60 border border-surface-700/50 rounded-xl text-white placeholder-surface-500 resize-none focus:outline-none focus:border-nexo-500/50 focus:ring-2 focus:ring-nexo-500/20 transition-all text-sm"
-                        />
-                        <div className="absolute bottom-2 right-3 text-xs text-surface-500 flex items-center gap-1.5">
-                          <kbd className="px-1.5 py-0.5 bg-surface-700/80 rounded border border-surface-600 text-surface-400 text-[10px]">Enter</kbd>
-                          <span>发送</span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={handleSendMessage}
-                        disabled={!inputValue.trim() || isGenerating}
-                        className="px-5 py-3 bg-nexo-500 hover:bg-nexo-600 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-lg shadow-nexo-500/20 disabled:shadow-none hover:scale-[1.02] disabled:hover:scale-100"
-                      >
-                        {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-            </div>
-          </div>
-
-          {/* 右侧面板 - 预览 & 代码 - 改进布局 */}
-          <div className="relative rounded-2xl overflow-hidden flex flex-col h-[calc(100vh-180px)] min-h-[650px] shadow-xl border border-surface-700/30 bg-surface-900/50 backdrop-blur-sm">
-            {/* 顶部栏：标签 + 预览控制 - 改进布局 */}
-            <div className="flex items-center justify-between border-b border-surface-700/40 bg-surface-900/60 backdrop-blur-sm px-4 py-3">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
-                </div>
-                <div className="h-4 w-px bg-surface-700/50" />
-
-                {/* 切换标签 */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowCodeEditor(false)}
-                    className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all rounded-xl ${
-                      !showCodeEditor 
-                        ? 'text-white bg-surface-800/60' 
-                        : 'text-surface-400 hover:text-white hover:bg-surface-800/40'
-                    }`}
-                  >
-                    <Layers className="w-4 h-4" />
-                    <span>预览</span>
-                  </button>
-                  <button
-                    onClick={() => setShowCodeEditor(true)}
-                    className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all rounded-xl ${
-                      showCodeEditor 
-                        ? 'text-white bg-surface-800/60' 
-                        : 'text-surface-400 hover:text-white hover:bg-surface-800/40'
-                    }`}
-                  >
-                    <Code className="w-4 h-4" />
-                    <span>代码</span>
-                    {projectFiles.length > 0 && (
-                      <span className={`px-2 py-0.5 text-xs rounded-lg ml-1 font-medium ${
-                        showCodeEditor 
-                          ? 'bg-nexo-500/20 text-nexo-400' 
-                          : 'bg-surface-700 text-surface-400'
-                      }`}>
-                        {projectFiles.length}
-                      </span>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* 预览控制 - 右侧对齐 */}
-              <div className="flex items-center gap-3">
-                {projectType !== 'html' && (
-                  <>
-                    {canStopPreview ? (
-                      <button
-                        onClick={() => previewRef.current?.stop()}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs rounded-lg transition-colors border border-red-500/30"
-                      >
-                        <Square className="w-3.5 h-3.5" />
-                        停止
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => previewRef.current?.start()}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-nexo-500 hover:bg-nexo-600 text-white text-xs rounded-lg transition-colors"
-                      >
-                        <Play className="w-3.5 h-3.5" />
-                        运行
-                      </button>
-                    )}
-                  </>
-                )}
-                <button
-                  onClick={() => previewRef.current?.refresh()}
-                  className="p-1.5 hover:bg-surface-700 rounded-lg transition-colors text-surface-400 hover:text-white"
-                  title="刷新预览"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => previewRef.current?.toggleLogs()}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg transition-colors text-surface-400 hover:text-white hover:bg-surface-800/50"
-                >
-                  <Terminal className="w-3.5 h-3.5" />
-                  日志
-                </button>
-
-                {/* 项目类型标签 */}
+              <button
+                onClick={() => {
+                  setViewMode('code')
+                  setSelectedApi(null)
+                }}
+                className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all rounded-xl ${
+                  viewMode === 'code'
+                    ? 'text-white bg-gradient-to-r from-nexo-500/20 to-nexo-500/10 border border-nexo-500/30 shadow-lg shadow-nexo-500/10' 
+                    : 'text-surface-400 hover:text-white hover:bg-surface-800/40'
+                }`}
+              >
+                <Code className="w-4 h-4" />
+                <span>代码</span>
                 {projectFiles.length > 0 && (
-                  <span className={`ml-2 px-2 py-1 ${projectTypeConfig[projectType].bgGlow} text-xs rounded-md font-medium flex items-center gap-1 mr-2`}>
-                    <span>{projectTypeConfig[projectType].icon}</span>
-                    <span className="text-white/90">{projectTypeConfig[projectType].label}</span>
+                  <span className={`px-2 py-0.5 text-xs rounded-lg ml-1 font-medium ${
+                    viewMode === 'code'
+                      ? 'bg-nexo-500/20 text-nexo-400' 
+                      : 'bg-surface-700 text-surface-400'
+                  }`}>
+                    {projectFiles.length}
                   </span>
                 )}
+              </button>
+              {selectedApi && (
+                <button
+                  onClick={() => setViewMode('api')}
+                  className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all rounded-xl ${
+                    viewMode === 'api'
+                      ? 'text-white bg-gradient-to-r from-nexo-500/20 to-nexo-500/10 border border-nexo-500/30 shadow-lg shadow-nexo-500/10' 
+                      : 'text-surface-400 hover:text-white hover:bg-surface-800/40'
+                  }`}
+                >
+                  <Code2 className="w-4 h-4" />
+                  <span>API 详情</span>
+                </button>
+              )}
+            </div>
+          </div>
 
-                {/* 全屏按钮（仅预览时） */}
-                {projectFiles.length > 0 && !showCodeEditor && (
+          {/* 操作按钮区域 */}
+          <div className="flex items-center gap-3">
+            {projectType !== 'html' && (
+              <>
+                {canStopPreview ? (
                   <button
-                    onClick={() => setIsFullscreen(true)}
-                    className="p-1.5 mr-2 hover:bg-surface-700/80 rounded-md transition-colors text-surface-400 hover:text-white group"
-                    title="全屏预览"
+                    onClick={() => previewRef.current?.stop()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs rounded-lg transition-colors border border-red-500/30"
                   >
-                    <Maximize2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                    <Square className="w-3.5 h-3.5" />
+                    停止
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => previewRef.current?.start()}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-nexo-500 hover:bg-nexo-600 text-white text-xs rounded-lg transition-colors"
+                  >
+                    <Play className="w-3.5 h-3.5" />
+                    运行
                   </button>
                 )}
-              </div>
+              </>
+            )}
+            <button
+              onClick={() => previewRef.current?.refresh()}
+              className="p-1.5 hover:bg-surface-700 rounded-lg transition-colors text-surface-400 hover:text-white"
+              title="刷新预览"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handleDownload}
+              className="p-1.5 hover:bg-surface-700 rounded-lg transition-colors text-surface-400 hover:text-white"
+              title="下载项目"
+            >
+              <Download className="w-4 h-4" />
+            </button>
+            <button
+              onClick={handlePublish}
+              disabled={isPublishing || projectFiles.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-nexo-500 hover:bg-nexo-600 text-white text-xs rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isPublishing ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>发布中...</span>
+                </>
+              ) : (
+                <>
+                  <Rocket className="w-3.5 h-3.5" />
+                  <span>发布</span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => previewRef.current?.toggleLogs()}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg transition-colors text-surface-400 hover:text-white hover:bg-surface-800/50"
+            >
+              <Terminal className="w-3.5 h-3.5" />
+              日志
+            </button>
+            {projectFiles.length > 0 && viewMode === 'preview' && (
+              <button
+                onClick={() => setIsFullscreen(true)}
+                className="p-1.5 hover:bg-surface-700/80 rounded-md transition-colors text-surface-400 hover:text-white group"
+                title="全屏预览"
+              >
+                <Maximize2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 主内容区 */}
+        <div className="flex-1 overflow-hidden bg-surface-950 relative">
+          {/* 预览区域 - 始终运行，但可能隐藏 */}
+          <div className={`absolute inset-0 ${viewMode === 'preview' ? 'block' : 'hidden'}`}>
+            <WebContainerPreview
+              ref={previewRef}
+              files={projectFiles}
+              projectType={projectType}
+              isFullscreen={isFullscreen}
+              onToggleFullscreen={() => setIsFullscreen(true)}
+              controlsHidden
+            />
+          </div>
+          
+          {/* 代码编辑器 */}
+          {viewMode === 'code' && (
+            <div className="absolute inset-0">
+              <FileEditor
+                files={projectFiles}
+                activeFile={activeFile}
+                onFileSelect={(path) => {
+                  setActiveFile(path)
+                  setViewMode('code')
+                }}
+                onFileChange={handleFileChange}
+                onFileCreate={handleFileCreate}
+                onFileDelete={handleFileDelete}
+              />
             </div>
-            
-            {/* 内容区 - 改进布局 */}
-            <div className="flex-1 overflow-hidden bg-surface-950">
-              <div className="h-full w-full flex gap-0">
-                {/* 侧边栏 - 改进布局 */}
-                <div className="h-full border-r border-surface-700/40 bg-surface-900/60 backdrop-blur-sm flex flex-col sidebar-container" style={{ width: isSidebarCollapsed ? 12 : sidebarWidth, minWidth: isSidebarCollapsed ? 8 : 280 }}>
-                  {isSidebarCollapsed ? (
-                    <div className="flex-1 flex items-center justify-center">
-                      <button
-                        onClick={() => setIsSidebarCollapsed(false)}
-                        className="w-6 h-6 rounded-md bg-surface-800 hover:bg-surface-700 text-surface-300 hover:text-white text-xs"
-                        title="展开侧边栏"
-                      >
-                        ▶
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col h-full gap-0">
-                      {/* 聊天面板 - 改进布局 */}
-                      <div 
-                        className="flex flex-col border-b border-surface-700/50" 
-                        style={{ 
-                          height: isChatCollapsed ? 'auto' : (isFileListCollapsed ? '100%' : `${chatHeight}%`), 
-                          minHeight: isChatCollapsed ? 'auto' : '120px',
-                          flexShrink: 0
-                        }}
-                      >
-                        <div className="flex items-center justify-between px-4 py-3 bg-surface-900/70 border-b border-surface-700/30">
-                          <span className="text-sm font-semibold text-surface-200 flex items-center gap-2">
-                            <Bot className="w-4 h-4 text-nexo-400" />
-                            AI 助手
-                          </span>
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => setIsChatCollapsed(!isChatCollapsed)}
-                              className="px-2 py-0.5 text-xs text-surface-400 hover:text-white hover:bg-surface-800 rounded"
-                              title={isChatCollapsed ? "展开聊天" : "折叠聊天"}
-                            >
-                              {isChatCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3 rotate-90" />}
-                            </button>
-                          <button
-                            onClick={() => setIsSidebarCollapsed(true)}
-                            className="px-2 py-0.5 text-xs text-surface-400 hover:text-white hover:bg-surface-800 rounded"
-                              title="折叠侧边栏"
-                          >
-                            ◀
-                          </button>
-                        </div>
-                      </div>
-                        {!isChatCollapsed && (
-                          <div className="flex-1 min-h-0 p-2">
-                            <ChatPanel
-                              messages={chatMessages}
-                              isLoading={isGenerating}
-                              onMessageSubmit={(message) => {
-                                setChatMessages(prev => [...prev, {
-                                  id: Date.now().toString(),
-                                  role: 'user',
-                                  content: message,
-                                  timestamp: new Date()
-                                }])
-                                setInputValue(message)
-                                handleSendMessage()
-                              }}
-                            />
-                          </div>
-                        )}
-                      </div>
+          )}
 
-                      {/* 垂直分隔条 - 改进布局 */}
-                      {!isChatCollapsed && !isFileListCollapsed && (
-                        <div
-                          onMouseDown={handleVerticalResizeStart}
-                          className={`h-2 cursor-row-resize bg-surface-700/30 hover:bg-surface-600/50 ${isResizingVertical ? 'bg-nexo-500' : ''} transition-colors`}
-                          title="拖拽调整高度"
-                        />
+          {/* API 详情 */}
+          {viewMode === 'api' && selectedApi && (
+            <div className="absolute inset-0 overflow-y-auto bg-surface-950">
+              <div className="max-w-4xl mx-auto p-8">
+                {/* 头部 */}
+                <div className="mb-8">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-nexo-500/30 to-nexo-500/10 border border-nexo-500/30 flex items-center justify-center shadow-lg shadow-nexo-500/20">
+                      <Code2 className="w-8 h-8 text-nexo-400" />
+                    </div>
+                    <div className="flex-1">
+                      <h1 className="text-3xl font-bold text-white mb-2 bg-gradient-to-r from-white to-surface-200 bg-clip-text text-transparent">{selectedApi.name}</h1>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <span className={`text-xs px-3 py-1.5 rounded-lg font-semibold ${
+                          selectedApi.status === 'active' 
+                            ? 'bg-nexo-500/20 text-nexo-300 border border-nexo-500/30 shadow-lg shadow-nexo-500/10' 
+                            : 'bg-surface-700 text-surface-400'
+                        }`}>
+                          {selectedApi.status === 'active' ? '运行中' : selectedApi.status}
+                        </span>
+                        <code className="text-xs text-surface-300 font-mono bg-surface-900/70 px-3 py-1.5 rounded-lg border border-surface-700/50">{selectedApi.route}</code>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-6">
+                  {/* HTTP 方法 */}
+                  <div className="bg-gradient-to-br from-surface-900/60 to-surface-900/40 rounded-2xl p-5 border border-surface-700/50 shadow-xl">
+                    <h2 className="text-sm font-semibold text-surface-200 mb-4 flex items-center gap-2">
+                      <div className="w-1 h-4 bg-gradient-to-b from-nexo-400 to-nexo-600 rounded-full" />
+                      HTTP 方法
+                    </h2>
+                    <div className="flex flex-wrap gap-2.5">
+                      {selectedApi.methods.map((method) => (
+                        <span
+                          key={method}
+                          className={`text-xs px-4 py-2 rounded-lg font-semibold transition-all hover:scale-105 ${
+                            method === 'GET' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30 shadow-lg shadow-blue-500/10' :
+                            method === 'POST' ? 'bg-green-500/20 text-green-300 border border-green-500/30 shadow-lg shadow-green-500/10' :
+                            method === 'PUT' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 shadow-lg shadow-yellow-500/10' :
+                            method === 'DELETE' ? 'bg-red-500/20 text-red-300 border border-red-500/30 shadow-lg shadow-red-500/10' :
+                            'bg-surface-700 text-surface-400'
+                          }`}
+                        >
+                          {method}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 函数信息 */}
+                  <div className="bg-gradient-to-br from-surface-900/60 to-surface-900/40 rounded-2xl p-5 border border-surface-700/50 shadow-xl">
+                    <h2 className="text-sm font-semibold text-surface-200 mb-4 flex items-center gap-2">
+                      <div className="w-1 h-4 bg-gradient-to-b from-nexo-400 to-nexo-600 rounded-full" />
+                      函数信息
+                    </h2>
+                    <div className="grid grid-cols-2 gap-4">
+                      {selectedApi.code && (
+                        <div className="bg-surface-800/50 rounded-lg p-3 border border-surface-700/30">
+                          <div className="text-xs text-surface-500 mb-1">代码长度</div>
+                          <div className="text-lg font-bold text-surface-200">{selectedApi.code.length}</div>
+                          <div className="text-xs text-surface-500">字符</div>
+                        </div>
                       )}
-
-                      {/* 文件列表和 API 列表容器 - 改进布局 */}
-                      <div className="flex flex-col flex-1 min-h-0 gap-0" style={{ 
-                        height: isChatCollapsed ? '100%' : `${100 - chatHeight}%`,
-                        flexShrink: 0
-                      }}>
-                        {/* 文件列表 */}
-                        <div className="flex flex-col flex-1 min-h-0 border-b border-surface-700/30">
-                          <div className="flex items-center justify-between px-4 py-3 bg-surface-900/70">
-                            <span className="text-sm font-semibold text-surface-200 flex items-center gap-2">
-                              <FileCode className="w-4 h-4 text-nexo-400" />
-                              文件列表
-                            </span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => setIsFileListCollapsed(!isFileListCollapsed)}
-                                className="px-2 py-0.5 text-xs text-surface-400 hover:text-white hover:bg-surface-800 rounded"
-                                title={isFileListCollapsed ? "展开文件列表" : "折叠文件列表"}
-                              >
-                                {isFileListCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3 rotate-90" />}
-                              </button>
-                            </div>
-                          </div>
-                        {!isFileListCollapsed && (
-                          <div className="flex-1 overflow-y-auto p-2">
-                              {projectFiles.length === 0 ? (
-                                <div className="px-2 py-4 text-center text-xs text-surface-500">
-                                  暂无文件
-                                </div>
-                              ) : (
-                                buildFileTree(projectFiles).map(node => (
-                                  <FileTreeNodeComponent
-                                    key={node.path}
-                                    node={node}
-                                    activeFile={activeFile}
-                                    onFileSelect={setActiveFile}
-                                  />
-                                ))
-                              )}
-                            </div>
-                          )}
+                      {selectedApi.invocations !== undefined && (
+                        <div className="bg-surface-800/50 rounded-lg p-3 border border-surface-700/30">
+                          <div className="text-xs text-surface-500 mb-1">调用次数</div>
+                          <div className="text-lg font-bold text-nexo-400">{selectedApi.invocations}</div>
+                          <div className="text-xs text-surface-500">次</div>
                         </div>
-
-                        {/* API 列表 - 改进布局 */}
-                        <div className="flex flex-col border-t border-surface-700/50" style={{ flexShrink: 0, maxHeight: isApiListCollapsed ? 'auto' : '280px' }}>
-                          <div className="flex items-center justify-between px-4 py-3 bg-surface-900/70">
-                            <span className="text-sm font-semibold text-surface-200 flex items-center gap-2">
-                              <Code2 className="w-4 h-4 text-nexo-400" />
-                              API 列表
-                            </span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                onClick={() => setIsApiListCollapsed(!isApiListCollapsed)}
-                                className="px-2 py-0.5 text-xs text-surface-400 hover:text-white hover:bg-surface-800 rounded"
-                                title={isApiListCollapsed ? "展开 API 列表" : "折叠 API 列表"}
-                              >
-                                {isApiListCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3 rotate-90" />}
-                              </button>
-                            </div>
-                          </div>
-                        {!isApiListCollapsed && (
-                          <div className="flex-1 overflow-y-auto p-3" style={{ maxHeight: '240px' }}>
-                            {functionsLoading ? (
-                              <div className="px-2 py-4 text-center text-xs text-surface-500">
-                                <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2" />
-                                加载中...
-                              </div>
-                            ) : functions.length === 0 ? (
-                              <div className="px-2 py-4 text-center text-xs text-surface-500">
-                                <div className="mb-2">暂无函数</div>
-                                <a
-                                  href="/functions/new"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 px-2 py-1 text-xs text-nexo-400 hover:text-nexo-300 hover:bg-surface-800 rounded transition-colors"
-                                >
-                                  <Plus className="w-3 h-3" />
-                                  创建函数
-                                </a>
-                              </div>
-                            ) : (
-                              <div className="space-y-1">
-                                {functions.map((fn) => (
-                                  <div
-                                    key={fn.id}
-                                    className="px-3 py-2.5 mb-2 rounded-xl bg-surface-800/40 hover:bg-surface-800/60 border border-surface-700/30 hover:border-surface-600/50 transition-all group"
-                                  >
-                                    <div className="flex items-start justify-between mb-2">
-                                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                                        <Code2 className="w-4 h-4 text-nexo-400 flex-shrink-0" />
-                                        <span className="text-surface-200 font-semibold text-sm truncate">{fn.name}</span>
-                                      </div>
-                                      <span className={`text-xs px-2 py-1 rounded-lg font-medium flex-shrink-0 ${
-                                        fn.status === 'active' 
-                                          ? 'bg-nexo-500/20 text-nexo-300 border border-nexo-500/30' 
-                                          : 'bg-surface-700 text-surface-400'
-                                      }`}>
-                                        {fn.status === 'active' ? '运行中' : fn.status}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-3 mb-2">
-                                      <code className="text-xs text-surface-400 font-mono bg-surface-900/50 px-2 py-1 rounded">{fn.route}</code>
-                                      <div className="flex items-center gap-1.5">
-                                        {fn.methods.slice(0, 3).map((method) => (
-                                          <span
-                                            key={method}
-                                            className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                                              method === 'GET' ? 'bg-blue-500/20 text-blue-300' :
-                                              method === 'POST' ? 'bg-green-500/20 text-green-300' :
-                                              method === 'PUT' ? 'bg-yellow-500/20 text-yellow-300' :
-                                              method === 'DELETE' ? 'bg-red-500/20 text-red-300' :
-                                              'bg-surface-700 text-surface-400'
-                                            }`}
-                                          >
-                                            {method}
-                                          </span>
-                                        ))}
-                                        {fn.methods.length > 3 && (
-                                          <span className="text-[10px] text-surface-500">+{fn.methods.length - 3}</span>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <a
-                                      href={`/functions/${fn.id}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex items-center gap-1.5 mt-2 text-xs text-surface-400 hover:text-nexo-300 transition-colors"
-                                    >
-                                      <ExternalLinkIcon className="w-3.5 h-3.5" />
-                                      查看详情
-                                    </a>
-                                  </div>
-                                ))}
-                                <div className="px-3 py-2 mt-3 border-t border-surface-700/30">
-                                  <a
-                                    href="/functions/new"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium text-nexo-400 hover:text-nexo-300 hover:bg-surface-800/60 rounded-xl border border-nexo-500/30 hover:border-nexo-500/50 transition-all"
-                                  >
-                                    <Plus className="w-4 h-4" />
-                                    创建新函数
-                                  </a>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
+                      )}
+                      {selectedApi.createdAt && (
+                        <div className="bg-surface-800/50 rounded-lg p-3 border border-surface-700/30">
+                          <div className="text-xs text-surface-500 mb-1">创建时间</div>
+                          <div className="text-sm font-medium text-surface-200">{new Date(selectedApi.createdAt).toLocaleDateString('zh-CN')}</div>
+                          <div className="text-xs text-surface-500">{new Date(selectedApi.createdAt).toLocaleTimeString('zh-CN')}</div>
                         </div>
+                      )}
+                      {selectedApi.updatedAt && (
+                        <div className="bg-surface-800/50 rounded-lg p-3 border border-surface-700/30">
+                          <div className="text-xs text-surface-500 mb-1">更新时间</div>
+                          <div className="text-sm font-medium text-surface-200">{new Date(selectedApi.updatedAt).toLocaleDateString('zh-CN')}</div>
+                          <div className="text-xs text-surface-500">{new Date(selectedApi.updatedAt).toLocaleTimeString('zh-CN')}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 环境变量 */}
+                  {selectedApi.env && Object.keys(selectedApi.env).length > 0 && (
+                    <div className="bg-gradient-to-br from-surface-900/60 to-surface-900/40 rounded-2xl p-5 border border-surface-700/50 shadow-xl">
+                      <h2 className="text-sm font-semibold text-surface-200 mb-4 flex items-center gap-2">
+                        <div className="w-1 h-4 bg-gradient-to-b from-nexo-400 to-nexo-600 rounded-full" />
+                        环境变量
+                      </h2>
+                      <div className="space-y-2">
+                        {Object.entries(selectedApi.env).map(([key, value]) => (
+                          <div key={key} className="flex items-center gap-3 text-sm bg-surface-800/50 rounded-lg p-3 border border-surface-700/30">
+                            <code className="text-nexo-400 font-mono bg-surface-900/70 px-3 py-1.5 rounded border border-nexo-500/20">{key}</code>
+                            <span className="text-surface-500">=</span>
+                            <code className="text-surface-300 font-mono bg-surface-900/70 px-3 py-1.5 rounded border border-surface-700/50 flex-1">{value}</code>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
-              </div>
-                {/* 拖拽分隔条 - 改进布局 */}
-                {!isSidebarCollapsed && (
-                  <div
-                    onMouseDown={handleResizeStart}
-                    className={`w-2 cursor-col-resize bg-surface-700/30 hover:bg-surface-600/50 transition-colors ${isResizing ? 'bg-nexo-500' : ''}`}
-                    title="拖拽调整宽度"
-                  />
-                )}
-                {/* 主内容区 - 改进布局 */}
-                <div className="flex-1 min-w-0">
-                  {showCodeEditor ? (
-                    <FileEditor
-                      files={projectFiles}
-                      activeFile={activeFile}
-                      onFileSelect={setActiveFile}
-                      onFileChange={handleFileChange}
-                      onFileCreate={handleFileCreate}
-                      onFileDelete={handleFileDelete}
-                    />
-                  ) : (
-                    <WebContainerPreview
-                      ref={previewRef}
-                      files={projectFiles}
-                      projectType={projectType}
-                      isFullscreen={isFullscreen}
-                      onToggleFullscreen={() => setIsFullscreen(true)}
-                      controlsHidden
-                    />
+
+                  {/* 限制信息 */}
+                  {selectedApi.limits && (
+                    <div className="bg-gradient-to-br from-surface-900/60 to-surface-900/40 rounded-2xl p-5 border border-surface-700/50 shadow-xl">
+                      <h2 className="text-sm font-semibold text-surface-200 mb-4 flex items-center gap-2">
+                        <div className="w-1 h-4 bg-gradient-to-b from-nexo-400 to-nexo-600 rounded-full" />
+                        资源限制
+                      </h2>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="bg-surface-800/50 rounded-lg p-3 border border-surface-700/30">
+                          <div className="text-xs text-surface-500 mb-1">最大执行时间</div>
+                          <div className="text-lg font-bold text-surface-200">{selectedApi.limits.max_execution_time_ms}</div>
+                          <div className="text-xs text-surface-500">毫秒</div>
+                        </div>
+                        <div className="bg-surface-800/50 rounded-lg p-3 border border-surface-700/30">
+                          <div className="text-xs text-surface-500 mb-1">最大内存</div>
+                          <div className="text-lg font-bold text-surface-200">{selectedApi.limits.max_memory_mb}</div>
+                          <div className="text-xs text-surface-500">MB</div>
+                        </div>
+                        {selectedApi.limits.max_request_body_kb && (
+                          <div className="bg-surface-800/50 rounded-lg p-3 border border-surface-700/30">
+                            <div className="text-xs text-surface-500 mb-1">最大请求体</div>
+                            <div className="text-lg font-bold text-surface-200">{selectedApi.limits.max_request_body_kb}</div>
+                            <div className="text-xs text-surface-500">KB</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   )}
+
+                  {/* 函数代码 */}
+                  {selectedApi.code && (
+                    <div className="bg-gradient-to-br from-surface-900/60 to-surface-900/40 rounded-2xl p-5 border border-surface-700/50 shadow-xl">
+                      <h2 className="text-sm font-semibold text-surface-200 mb-4 flex items-center gap-2">
+                        <div className="w-1 h-4 bg-gradient-to-b from-nexo-400 to-nexo-600 rounded-full" />
+                        函数代码
+                      </h2>
+                      <div className="bg-surface-950 rounded-xl p-4 overflow-x-auto border border-surface-700/50">
+                        <pre className="text-xs text-surface-300 font-mono whitespace-pre-wrap leading-relaxed">
+                          <code>{selectedApi.code}</code>
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 操作按钮 */}
+                  <div className="flex items-center gap-3">
+                    <a
+                      href={`/functions/${selectedApi.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-nexo-500 to-nexo-600 hover:from-nexo-600 hover:to-nexo-700 text-white rounded-lg transition-all shadow-lg shadow-nexo-500/20 hover:shadow-nexo-500/30"
+                    >
+                      <ExternalLinkIcon className="w-4 h-4" />
+                      在管理面板中打开
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

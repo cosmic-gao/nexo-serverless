@@ -9,6 +9,9 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts"
     }
+  },
+  "dependencies": {
+    "@nexo/api": "workspace:*"
   }
 }
 

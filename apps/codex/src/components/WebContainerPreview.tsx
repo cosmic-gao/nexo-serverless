@@ -348,7 +348,7 @@ const WebContainerPreview = forwardRef<WebContainerPreviewHandle, WebContainerPr
         <iframe
           ref={iframeRef}
           title="Preview"
-          className="w-full h-full border-0 bg-white"
+          className="w-full h-full border-0 bg-surface-950"
           sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-downloads"
           allow="cross-origin-isolated"
         />
