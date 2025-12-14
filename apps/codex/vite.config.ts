@@ -11,11 +11,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
-      '@nexo/api': resolve(__dirname, '../../packages/api/src'),
-      '@nexo/utils': resolve(__dirname, '../../packages/utils/src'),
     }
   },
   server: {
+    port: 5174, // Codex 使用 5174 端口，避免与 Admin (5173) 冲突
     headers: {
       // WebContainers 需要这些头来启用 SharedArrayBuffer
       'Cross-Origin-Embedder-Policy': 'require-corp',
@@ -26,3 +25,4 @@ export default defineConfig({
     include: ['@webcontainer/api'],
   },
 })
+

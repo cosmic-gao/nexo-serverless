@@ -1,12 +1,11 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Zap, Menu, X, LayoutDashboard, Code2, Sparkles } from 'lucide-react'
+import { Zap, Menu, X, LayoutDashboard, Code2 } from 'lucide-react'
 import { useState } from 'react'
 
 const navLinks = [
   { path: '/', label: '首页', icon: null },
   { path: '/dashboard', label: '控制台', icon: LayoutDashboard },
   { path: '/functions', label: '函数', icon: Code2 },
-  { path: '/ai-generator', label: 'AI 生成', icon: Sparkles },
 ]
 
 export default function Navbar() {

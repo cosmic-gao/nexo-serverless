@@ -9,7 +9,7 @@ import {
   ArrowRight,
   RefreshCw
 } from 'lucide-react'
-import api, { PoolStats, Function } from '../lib/api'
+import { api, PoolStats, Function } from '../lib/api'
 
 export default function Dashboard() {
   const [stats, setStats] = useState<PoolStats | null>(null)
@@ -46,8 +46,8 @@ export default function Dashboard() {
     return () => clearInterval(interval)
   }, [])
 
-  const successRate = stats && stats.total_executions > 0
-    ? ((stats.successful_executions / stats.total_executions) * 100).toFixed(1)
+  const successRate = stats && stats.total_executions && stats.total_executions > 0
+    ? ((stats.successful_executions || 0) / stats.total_executions * 100).toFixed(1)
     : '100'
 
   return (

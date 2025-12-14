@@ -14,7 +14,7 @@ import {
   Check,
   AlertCircle
 } from 'lucide-react'
-import api, { CreateFunctionRequest, InvokeResult } from '../lib/api'
+import { api, CreateFunctionRequest, InvokeResult } from '../lib/api'
 
 const DEFAULT_CODE = `// Nexo Serverless Function
 // 
@@ -44,6 +44,7 @@ export default function FunctionEditor() {
   const [saving, setSaving] = useState(false)
   const [invoking, setInvoking] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [functionLoaded, setFunctionLoaded] = useState(isNew)
 
   // Form state
   const [name, setName] = useState('')
@@ -68,16 +69,22 @@ export default function FunctionEditor() {
 
   const loadFunction = async (functionId: string) => {
     setLoading(true)
+    setFunctionLoaded(false)
     const res = await api.getFunction(functionId)
     if (res.success && res.data) {
       const fn = res.data
       setName(fn.name)
-      setCode(fn.code)
+      setCode(fn.code || DEFAULT_CODE)
       setRoute(fn.route)
       setMethods(fn.methods)
-      setMaxExecutionTime(fn.limits.max_execution_time_ms)
-      setMaxMemory(fn.limits.max_memory_mb)
-      setEnvVars(Object.entries(fn.env).map(([key, value]) => ({ key, value })))
+      if (fn.limits) {
+        setMaxExecutionTime(fn.limits.max_execution_time_ms)
+        setMaxMemory(fn.limits.max_memory_mb)
+      }
+      setEnvVars(Object.entries(fn.env || {}).map(([key, value]) => ({ key, value: String(value) })))
+      setFunctionLoaded(true)
+    } else {
+      console.error('Failed to load function:', res.error)
     }
     setLoading(false)
   }
@@ -114,23 +121,36 @@ export default function FunctionEditor() {
       },
     }
 
-    const res = isNew 
-      ? await api.createFunction(data)
-      : await api.updateFunction(id!, data)
+    try {
+      const res = isNew 
+        ? await api.createFunction(data)
+        : await api.updateFunction(id!, data)
 
-    setSaving(false)
+      setSaving(false)
 
-    if (res.success && res.data) {
-      if (isNew) {
-        navigate(`/functions/${res.data.id}`)
+      if (res.success && res.data) {
+        if (isNew && res.data.id) {
+          // 等待一下确保后端已保存
+          await new Promise(resolve => setTimeout(resolve, 200))
+          setFunctionLoaded(true)
+          navigate(`/functions/${res.data.id}`, { replace: true })
+        } else {
+          // 更新现有函数后，重新加载以确保数据同步
+          if (id) {
+            await loadFunction(id)
+          }
+        }
+      } else {
+        alert(res.error || '保存失败')
       }
-    } else {
-      alert(res.error || '保存失败')
+    } catch (err) {
+      setSaving(false)
+      alert(err instanceof Error ? err.message : '保存失败')
     }
   }
 
   const handleInvoke = async () => {
-    if (isNew) {
+    if (isNew || !id || !functionLoaded) {
       alert('请先保存函数')
       return
     }
@@ -141,9 +161,9 @@ export default function FunctionEditor() {
 
     try {
       const body = testBody.trim() ? JSON.parse(testBody) : null
-      const res = await api.invokeFunction(id!, body)
+      const res = await api.invokeFunction(id, body)
       
-      if (res.success) {
+      if (res.success && res.data) {
         setTestResult(res.data as InvokeResult)
       } else {
         setTestError(res.error || '调用失败')
@@ -427,7 +447,7 @@ export default function FunctionEditor() {
                 </div>
                 <button
                   onClick={handleInvoke}
-                  disabled={invoking || isNew}
+                  disabled={invoking || isNew || !functionLoaded}
                   className="flex items-center gap-1 px-3 py-1.5 bg-nexo-500 hover:bg-nexo-600 text-white text-sm rounded-lg transition-colors disabled:opacity-50"
                 >
                   <Play className="w-3 h-3" />
@@ -461,22 +481,33 @@ export default function FunctionEditor() {
 
                 {testResult && (
                   <div className="space-y-3">
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className={`px-2 py-0.5 rounded font-medium ${
-                        testResult.status < 400 
-                          ? 'bg-green-500/20 text-green-400' 
-                          : 'bg-red-500/20 text-red-400'
-                      }`}>
-                        {testResult.status}
-                      </span>
-                      <span className="flex items-center gap-1 text-surface-400">
-                        <Zap className="w-3 h-3" />
-                        {testResult.execution_time_ms}ms
-                      </span>
-                    </div>
-                    <pre className="p-3 bg-surface-900/50 rounded-lg text-surface-200 font-mono text-xs overflow-auto max-h-64">
-                      {JSON.stringify(testResult.body, null, 2)}
-                    </pre>
+                    {testResult.status !== undefined && (
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className={`px-2 py-0.5 rounded font-medium ${
+                          testResult.status < 400 
+                            ? 'bg-green-500/20 text-green-400' 
+                            : 'bg-red-500/20 text-red-400'
+                        }`}>
+                          {testResult.status}
+                        </span>
+                        {testResult.execution_time_ms !== undefined && (
+                          <span className="flex items-center gap-1 text-surface-400">
+                            <Zap className="w-3 h-3" />
+                            {testResult.execution_time_ms}ms
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {testResult.body !== undefined && (
+                      <pre className="p-3 bg-surface-900/50 rounded-lg text-surface-200 font-mono text-xs overflow-auto max-h-64">
+                        {JSON.stringify(testResult.body, null, 2)}
+                      </pre>
+                    )}
+                    {testResult.data !== undefined && testResult.body === undefined && (
+                      <pre className="p-3 bg-surface-900/50 rounded-lg text-surface-200 font-mono text-xs overflow-auto max-h-64">
+                        {JSON.stringify(testResult.data, null, 2)}
+                      </pre>
+                    )}
                   </div>
                 )}
 

@@ -1,141 +1,42 @@
-// @nexo/api - Browser API client for Nexo Runtime (framework-agnostic)
-// This package avoids bundler-specific globals. Provide baseUrl via ctor.
-
-export interface Function {
-  id: string
-  name: string
-  code: string
-  route: string
-  methods: string[]
-  env: Record<string, string>
-  limits: {
-    max_execution_time_ms: number
-    max_memory_mb: number
-    max_request_body_kb: number
-  }
-  created_at: string
-  updated_at: string
-  status: 'active' | 'inactive' | 'deploying' | 'error'
-  invocations: number
-  last_invoked_at: string | null
-}
-
-export interface CreateFunctionRequest {
-  name: string
-  code: string
-  route: string
-  methods?: string[]
-  env?: Record<string, string>
-  limits?: Partial<Function['limits']>
-}
-
-export interface UpdateFunctionRequest {
-  name?: string
-  code?: string
-  route?: string
-  methods?: string[]
-  env?: Record<string, string>
-  limits?: Partial<Function['limits']>
-  status?: Function['status']
-}
-
-export interface PoolStats {
-  total_executions: number
-  successful_executions: number
-  failed_executions: number
-  total_execution_time_ms: number
-  avg_execution_time_ms: number
-  active_isolates: number
-  max_concurrent: number
-}
-
-export interface InvokeResult {
-  status: number
-  body: unknown
-  execution_time_ms: number
-  function_id?: string
-}
-
-export interface DeployPreviewRequest {
-  html: string
-  name?: string
-  route?: string
-}
-
-export interface DeploySiteRequest {
-  files: { path: string; content: string }[]
-  name?: string
-  route?: string
-  project_type?: string
-}
-
-export interface DeployPreviewResult {
-  id: string
-  route: string
-  url: string
-}
-
-export interface DeploySiteResult {
-  id: string
-  name: string
-  route: string
-  url: string
-  files_count: number
-}
-
-export interface Site {
-  id: string
-  name: string
-  route: string
-  files: { path: string; content: string; mime_type: string }[]
-  project_type: string
-  created_at: string
-  updated_at: string
-  visits: number
-}
-
-export interface ApiResponse<T> {
-  success: boolean
-  data?: T
-  error?: string
-}
-
+// Nexo API Client
 export class NexoAPI {
-  private baseUrl: string
-  private fetcher: typeof fetch
+  private baseURL: string
 
-  constructor(baseUrl: string, fetcher?: typeof fetch) {
-    this.baseUrl = baseUrl || ''
-    const rawFetch = fetcher ?? (globalThis.fetch as typeof fetch)
-    if (!rawFetch) {
-      throw new Error('fetch is not available in this environment. Provide a fetch implementation (e.g., undici).')
-    }
-    // 绑定 fetch 以确保正确的 this 上下文，避免 "Illegal invocation" 错误
-    // 如果用户提供了自定义 fetcher，也进行绑定以确保兼容性
-    this.fetcher = rawFetch.bind(globalThis) as typeof fetch
+  constructor(baseURL: string = 'http://localhost:3000') {
+    this.baseURL = baseURL
   }
 
-  private async request<T>(path: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<{ success: boolean; data?: T; error?: string }> {
     try {
-      const response = await this.fetcher(`${this.baseUrl}${path}`, {
+      const response = await fetch(`${this.baseURL}${endpoint}`, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
-          ...(options.headers || {}),
+          ...options.headers,
         },
       })
 
-      const text = await response.text()
-
-      try {
-        const data = JSON.parse(text)
-        return data
-      } catch {
-        return {
-          success: false,
-          error: response.ok ? 'Invalid response format' : `HTTP ${response.status}: ${text}`,
+      const responseData = await response.json()
+      
+      // 后端返回的格式是 { success: boolean, data?: T, error?: string }
+      if (!response.ok || !responseData.success) {
+        return { 
+          success: false, 
+          error: responseData.error || `HTTP ${response.status}` 
         }
       }
+
+      // 如果响应本身就是数据（如 invoke 接口），直接返回
+      // 否则返回 data 字段
+      if (responseData.data !== undefined) {
+        return { success: true, data: responseData.data }
+      }
+      
+      // 兼容直接返回数据的情况
+      return { success: true, data: responseData as T }
     } catch (error) {
       return {
         success: false,
@@ -144,133 +45,145 @@ export class NexoAPI {
     }
   }
 
-  // Health check
-  async health() {
-    return this.request<{ status: string; version: string }>("/health")
+  // Functions API
+  async listFunctions(): Promise<{
+    success: boolean
+    data?: Function[]
+    error?: string
+  }> {
+    return this.request<Function[]>('/api/functions')
   }
 
-  // Get runtime statistics
-  async getStats() {
-    return this.request<PoolStats>("/stats")
-  }
-
-  // Function CRUD
-  async listFunctions() {
-    return this.request<Function[]>("/api/functions")
-  }
-
-  async getFunction(id: string) {
+  async getFunction(id: string): Promise<{
+    success: boolean
+    data?: Function
+    error?: string
+  }> {
     return this.request<Function>(`/api/functions/${id}`)
   }
 
-  async createFunction(data: CreateFunctionRequest) {
-    return this.request<Function>("/api/functions", {
-      method: "POST",
+  async createFunction(
+    data: CreateFunctionRequest
+  ): Promise<{ success: boolean; data?: Function; error?: string }> {
+    return this.request<Function>('/api/functions', {
+      method: 'POST',
       body: JSON.stringify(data),
     })
   }
 
-  async updateFunction(id: string, data: UpdateFunctionRequest) {
+  async updateFunction(
+    id: string,
+    data: Partial<CreateFunctionRequest>
+  ): Promise<{ success: boolean; data?: Function; error?: string }> {
     return this.request<Function>(`/api/functions/${id}`, {
-      method: "PUT",
+      method: 'PUT',
       body: JSON.stringify(data),
     })
   }
 
-  async deleteFunction(id: string) {
-    return this.request<void>(`/api/functions/${id}`, {
-      method: "DELETE",
+  async deleteFunction(id: string): Promise<{
+    success: boolean
+    error?: string
+  }> {
+    return this.request(`/api/functions/${id}`, {
+      method: 'DELETE',
     })
   }
 
-  // Invoke function
-  async invokeFunction(id: string, body?: unknown) {
+  async invokeFunction(
+    id: string,
+    data?: Record<string, unknown>
+  ): Promise<{ success: boolean; data?: InvokeResult; error?: string }> {
     return this.request<InvokeResult>(`/api/functions/${id}/invoke`, {
-      method: "POST",
-      body: body ? JSON.stringify(body) : undefined,
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
     })
   }
 
-  // Invoke by route
-  async invokeByRoute(route: string, method: string = "GET", body?: unknown) {
-    return this.request<InvokeResult>(`/fn${route}`, {
-      method,
-      body: body ? JSON.stringify(body) : undefined,
+  // Sites API
+  async deploySite(data: {
+    files: { path: string; content: string }[]
+    project_type?: string
+  }): Promise<{ success: boolean; data?: { url: string }; error?: string }> {
+    return this.request<{ url: string }>('/api/sites', {
+      method: 'POST',
+      body: JSON.stringify(data),
     })
   }
 
-  // Deploy static HTML preview
-  async deployPreview(data: DeployPreviewRequest): Promise<ApiResponse<DeployPreviewResult>> {
-    const timestamp = Date.now()
-    const routePath = data.route || `/preview/${timestamp}`
-    const functionName = data.name || `ai-preview-${timestamp}`
-
-    const functionCode = `// 静态 HTML 页面托管函数\n// 由 AI 代码生成器创建\n\nvar htmlContent = ${JSON.stringify(data.html)};\n\nfunction handler(request, ctx) {\n  return new Response(htmlContent, {\n    headers: {\n      'Content-Type': 'text/html; charset=utf-8'\n    }\n  });\n}`
-
-    const res = await this.createFunction({
-      name: functionName,
-      code: functionCode,
-      route: routePath,
-      methods: ["GET"],
-      env: {},
-      limits: {
-        max_execution_time_ms: 1000,
-        max_memory_mb: 32,
-        max_request_body_kb: 16,
-      },
-    })
-
-    if (res.success && res.data) {
-      return {
-        success: true,
-        data: {
-          id: res.data.id,
-          route: routePath,
-          url: `${this.baseUrl}/fn${routePath}`,
-        },
-      }
-    }
-
-    return {
-      success: false,
-      error: res.error || '部署失败',
-    }
+  // Pool Stats
+  async getPoolStats(): Promise<{
+    success: boolean
+    data?: PoolStats
+    error?: string
+  }> {
+    return this.request<PoolStats>('/api/pool/stats')
   }
 
-  // List deployed previews
-  async listPreviews(): Promise<ApiResponse<Function[]>> {
-    const res = await this.listFunctions()
-    if (res.success && res.data) {
-      const previews = res.data.filter((fn) => fn.name.startsWith('ai-preview-'))
-      return { success: true, data: previews }
-    }
-    return res
-  }
-
-  // Static site APIs
-  async deploySite(data: DeploySiteRequest): Promise<ApiResponse<DeploySiteResult>> {
-    return this.request<DeploySiteResult>("/api/sites", {
-      method: "POST",
-      body: JSON.stringify({
-        name: data.name,
-        route: data.route,
-        files: data.files,
-        project_type: data.project_type || "html",
-      }),
-    })
-  }
-
-  async listSites(): Promise<ApiResponse<Site[]>> {
-    return this.request<Site[]>("/api/sites")
-  }
-
-  async getSite(id: string): Promise<ApiResponse<Site>> {
-    return this.request<Site>(`/api/sites/${id}`)
-  }
-
-  async deleteSite(id: string): Promise<ApiResponse<void>> {
-    return this.request<void>(`/api/sites/${id}`, {
-      method: "DELETE",
-    })
+  // Stats (alias for getPoolStats)
+  async getStats(): Promise<{
+    success: boolean
+    data?: PoolStats
+    error?: string
+  }> {
+    return this.getPoolStats()
   }
 }
+
+// Types
+export interface Function {
+  id: string
+  name: string
+  route: string
+  methods: string[]
+  status: 'active' | 'inactive' | 'error'
+  code?: string
+  env?: Record<string, string>
+  limits?: FunctionLimits
+  invocations?: number
+  createdAt?: string
+  updatedAt?: string
+  updated_at?: string // 后端可能使用 snake_case
+  created_at?: string // 后端可能使用 snake_case
+}
+
+export interface FunctionLimits {
+  max_execution_time_ms: number
+  max_memory_mb: number
+  max_request_body_kb?: number
+}
+
+export interface CreateFunctionRequest {
+  name: string
+  route: string
+  methods: string[]
+  code?: string
+  environment?: Record<string, string>
+  env?: Record<string, string> // 别名，用于兼容
+  limits?: FunctionLimits
+}
+
+export interface InvokeResult {
+  success: boolean
+  data?: unknown
+  error?: string
+  logs?: string[]
+  status?: number
+  execution_time_ms?: number
+  body?: unknown
+}
+
+export interface PoolStats {
+  total: number
+  active: number
+  idle: number
+  max: number
+  // 扩展统计字段
+  total_executions?: number
+  successful_executions?: number
+  failed_executions?: number
+  avg_execution_time_ms?: number
+  active_isolates?: number
+  max_concurrent?: number
+}
+

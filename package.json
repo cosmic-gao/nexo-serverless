@@ -4,13 +4,16 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter @nexo/web dev",
-    "dev:web": "pnpm --filter @nexo/web dev",
+    "dev": "pnpm --filter @nexo/admin dev",
+    "dev:admin": "pnpm --filter @nexo/admin dev",
+    "dev:codex": "pnpm --filter @nexo/codex dev",
     "dev:all": "node scripts/dev.mjs",
-    "build": "pnpm --filter @nexo/utils build && pnpm --filter @nexo/api build && pnpm --filter @nexo/web build",
-    "build:web": "pnpm --filter @nexo/web build",
+    "build": "pnpm --filter @nexo/utils build && pnpm --filter @nexo/api build && pnpm --filter @nexo/admin build",
+    "build:admin": "pnpm --filter @nexo/admin build",
+    "build:codex": "pnpm --filter @nexo/codex build",
     "build:runtime": "cd runtime && cargo build --release",
-    "preview:web": "pnpm --filter @nexo/web preview",
+    "preview:admin": "pnpm --filter @nexo/admin preview",
+    "preview:codex": "pnpm --filter @nexo/codex preview",
     "lint": "pnpm -r --filter @nexo/* run lint",
     "test": "pnpm -r --filter @nexo/* run test"
   }

@@ -33,7 +33,7 @@ import {
   Code2,
   ExternalLink as ExternalLinkIcon
 } from 'lucide-react'
-import api, { Function } from '../lib/api'
+import { api, Function } from '../lib/api'
 import { ProjectFile, ProjectType, getTemplate, allTemplates } from '../lib/projectTemplates'
 import WebContainerPreview, { WebContainerPreviewHandle } from '../components/WebContainerPreview'
 import FileEditor from '../components/FileEditor'
@@ -1352,7 +1352,7 @@ export default function AICodeGenerator() {
   const [publishStatus, setPublishStatus] = useState('')
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null)
   const [urlCopied, setUrlCopied] = useState(false)
-  const [showChatPanel, setShowChatPanel] = useState(true)
+  const [_showChatPanel, _setShowChatPanel] = useState(true) // 保留用于未来功能
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [sidebarWidth, setSidebarWidth] = useState<number>(320)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false)
@@ -1370,7 +1370,7 @@ export default function AICodeGenerator() {
   const startChatHeightRef = useRef<number>(50)
   const previewRef = useRef<WebContainerPreviewHandle>(null)
   const [canStopPreview, setCanStopPreview] = useState(false)
-  const [isPreviewRunning, setIsPreviewRunning] = useState(false)
+  const [_isPreviewRunning, setIsPreviewRunning] = useState(false) // isPreviewRunning 保留用于未来功能
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -1559,7 +1559,7 @@ export default function AICodeGenerator() {
           (status) => {
             setPublishStatus(status.message)
           },
-          (log) => {
+          (_log) => {
             // Build log handler
           }
         )

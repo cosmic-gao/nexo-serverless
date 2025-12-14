@@ -6,7 +6,6 @@ import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
 import Functions from './pages/Functions'
 import FunctionEditor from './pages/FunctionEditor'
-import AICodeGenerator from './pages/AICodeGenerator'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -24,7 +23,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route path="functions" element={<Functions />} />
           <Route path="functions/new" element={<FunctionEditor />} />
           <Route path="functions/:id" element={<FunctionEditor />} />
-          <Route path="ai-generator" element={<AICodeGenerator />} />
         </Route>
       </Routes>
     </BrowserRouter>

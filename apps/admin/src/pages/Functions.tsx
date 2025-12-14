@@ -11,7 +11,7 @@ import {
   Clock,
   Zap
 } from 'lucide-react'
-import api, { Function } from '../lib/api'
+import { api, Function } from '../lib/api'
 
 export default function Functions() {
   const [functions, setFunctions] = useState<Function[]>([])
@@ -27,7 +27,10 @@ export default function Functions() {
     setLoading(true)
     const res = await api.listFunctions()
     if (res.success && res.data) {
-      setFunctions(res.data)
+      // 确保 data 是数组
+      setFunctions(Array.isArray(res.data) ? res.data : [])
+    } else {
+      setFunctions([])
     }
     setLoading(false)
   }
@@ -39,11 +42,11 @@ export default function Functions() {
     
     const res = await api.deleteFunction(id)
     if (res.success) {
-      setFunctions(functions.filter(f => f.id !== id))
+      setFunctions((Array.isArray(functions) ? functions : []).filter(f => f.id !== id))
     }
   }
 
-  const filteredFunctions = functions.filter(fn => {
+  const filteredFunctions = (Array.isArray(functions) ? functions : []).filter(fn => {
     const matchesSearch = fn.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          fn.route.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesStatus = selectedStatus === 'all' || fn.status === selectedStatus
@@ -206,11 +209,11 @@ export default function Functions() {
                 <div className="flex items-center justify-between text-sm text-surface-400 mb-4 pb-4 border-b border-surface-700">
                   <div className="flex items-center gap-1">
                     <Zap className="w-4 h-4" />
-                    <span>{fn.invocations} 次调用</span>
+                    <span>{fn.invocations || 0} 次调用</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />
-                    <span>{fn.limits.max_execution_time_ms}ms</span>
+                    <span>{fn.limits?.max_execution_time_ms || 50}ms</span>
                   </div>
                 </div>
 
@@ -232,9 +235,11 @@ export default function Functions() {
                 </div>
 
                 {/* Last updated */}
-                <div className="mt-4 text-xs text-surface-500">
-                  更新于 {formatDate(fn.updated_at)}
-                </div>
+                {(fn.updated_at || fn.updatedAt) && (
+                  <div className="mt-4 text-xs text-surface-500">
+                    更新于 {formatDate(fn.updated_at || fn.updatedAt || '')}
+                  </div>
+                )}
               </div>
             ))}
           </div>
