@@ -1624,51 +1624,30 @@ export default function AICodeGenerator() {
 
   return (
     <div className="pt-16 pb-4 min-h-screen relative overflow-hidden">
-      {/* 背景装饰 - 赛博朋克风格 */}
+      {/* 背景装饰 - 现代简洁风格 */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        {/* 主渐变光晕 - 更强烈的色彩 */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[800px] bg-gradient-to-b from-nexo-500/20 via-purple-500/10 to-transparent rounded-full blur-3xl" />
-        <div className="absolute top-20 -left-40 w-[600px] h-[600px] bg-gradient-to-br from-purple-600/15 to-pink-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s' }} />
-        <div className="absolute bottom-0 -right-40 w-[800px] h-[800px] bg-gradient-to-tl from-cyan-500/15 to-blue-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '8s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-emerald-500/5 to-nexo-500/5 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '10s' }} />
-        
-        {/* 网格背景 - 更明显 */}
-        <div className="absolute inset-0 bg-grid opacity-40" />
-        
-        {/* 扫描线效果 */}
-        <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,255,136,0.02)_50%)] bg-[length:100%_4px] animate-scan" style={{ animationDuration: '8s' }} />
-        
-        {/* 装饰性光点 - 更多更炫 */}
-        <div className="absolute top-28 left-[15%] w-2 h-2 bg-nexo-400 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
-        <div className="absolute top-40 right-[20%] w-1.5 h-1.5 bg-purple-400 rounded-full animate-ping" style={{ animationDuration: '3s', animationDelay: '0.5s' }} />
-        <div className="absolute bottom-32 left-[25%] w-2 h-2 bg-cyan-400 rounded-full animate-ping" style={{ animationDuration: '2.5s', animationDelay: '1s' }} />
-        <div className="absolute top-60 left-[40%] w-1 h-1 bg-pink-400 rounded-full animate-ping" style={{ animationDuration: '4s', animationDelay: '1.5s' }} />
-        <div className="absolute bottom-48 right-[35%] w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" style={{ animationDuration: '3.5s', animationDelay: '2s' }} />
-        
-        {/* 流动的光线效果 */}
-        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-nexo-500/50 to-transparent animate-pulse" style={{ animationDuration: '3s' }} />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-purple-500/50 to-transparent animate-pulse" style={{ animationDuration: '4s' }} />
+        {/* 柔和的渐变背景 */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] bg-gradient-to-b from-nexo-500/8 via-emerald-500/5 to-transparent rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-gradient-to-tl from-blue-500/6 to-cyan-500/4 rounded-full blur-3xl" />
       </div>
 
-      <div className="max-w-[1920px] mx-auto px-4 relative">
-        {/* Header - 紧凑的设计 */}
-        <div className="flex items-center justify-between mb-4">
+      <div className="max-w-[1920px] mx-auto px-6 relative">
+        {/* Header - 更宽松的布局 */}
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            {/* 动态图标 - 更紧凑 */}
+            {/* Logo 图标 - 简洁现代 */}
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-nexo-500 to-emerald-500 rounded-xl blur-md opacity-60 group-hover:opacity-80 transition-opacity" />
-              <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-nexo-500 to-emerald-600 flex items-center justify-center shadow-xl shadow-nexo-500/40 group-hover:scale-110 transition-transform">
+              <div className="relative w-12 h-12 rounded-xl bg-gradient-to-br from-nexo-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-nexo-500/20 group-hover:shadow-xl group-hover:shadow-nexo-500/30 transition-all duration-300 group-hover:scale-105">
                 <Wand2 className="w-6 h-6 text-white" />
-                <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center animate-pulse shadow-lg shadow-purple-500/50">
-                  <Sparkles className="w-2.5 h-2.5 text-white" />
-                </div>
               </div>
             </div>
             
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-white tracking-tight bg-gradient-to-r from-white to-white/80 bg-clip-text">AI 代码生成器</h1>
-                <span className="px-2 py-0.5 bg-gradient-to-r from-nexo-500/30 to-purple-500/30 border border-nexo-500/40 rounded-md text-[10px] font-bold text-nexo-400 uppercase tracking-wider animate-pulse">
+                <h1 className="text-3xl font-bold tracking-tight text-white">
+                  AI 代码生成器
+                </h1>
+                <span className="px-2.5 py-0.5 bg-nexo-500/10 border border-nexo-500/20 rounded-md text-[10px] font-medium text-nexo-400 uppercase tracking-wider">
                   Live
                 </span>
               </div>
@@ -1688,8 +1667,8 @@ export default function AICodeGenerator() {
           </div>
         </div>
 
-        {/* 项目类型选择器 - 紧凑的胶囊设计 */}
-        <div className="flex items-center gap-3 mb-4">
+        {/* 项目类型选择器 - 更宽松的布局 */}
+        <div className="flex items-center gap-4 mb-6">
           <div className="flex items-center gap-1.5 text-surface-500 text-xs">
             <Layers className="w-3.5 h-3.5" />
             <span>类型</span>
@@ -1708,18 +1687,15 @@ export default function AICodeGenerator() {
                     setActiveFile(template.entryFile)
                   }
                 }}
-                className={`relative group flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+                className={`relative group flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all duration-300 overflow-hidden ${
                   isActive 
-                    ? 'text-white shadow-lg' 
+                    ? 'text-white shadow-xl' 
                     : 'text-surface-400 hover:text-white hover:bg-surface-800/60'
                 }`}
               >
-                {/* 活跃状态的渐变背景 */}
+                {/* 活跃状态的背景 */}
                 {isActive && (
-                  <>
-                    <div className={`absolute inset-0 bg-gradient-to-r ${config.color} rounded-lg`} />
-                    <div className={`absolute inset-0 bg-gradient-to-r ${config.color} rounded-lg blur-md opacity-60`} />
-                  </>
+                  <div className={`absolute inset-0 bg-gradient-to-r ${config.color} rounded-xl opacity-90`} />
                 )}
                 
                 <span className="relative text-lg group-hover:scale-110 transition-transform">{config.icon}</span>
@@ -1798,8 +1774,8 @@ export default function AICodeGenerator() {
           </div>
         )}
 
-        {/* 主内容区域 - 预览区域更大 */}
-        <div className="grid grid-cols-1 gap-4">
+        {/* 主内容区域 - 改进布局结构 */}
+        <div className="grid grid-cols-1 gap-6">
           {/* 左侧面板 - AI 对话 (占 4 列) */}
           <div className="hidden">
             {/* 标题栏 - 更紧凑 */}
@@ -1974,7 +1950,7 @@ export default function AICodeGenerator() {
                       <button
                         onClick={handleSendMessage}
                         disabled={!inputValue.trim() || isGenerating}
-                        className="px-5 bg-gradient-to-r from-nexo-500 to-emerald-500 hover:from-nexo-600 hover:to-emerald-600 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-lg shadow-nexo-500/20 disabled:shadow-none hover:scale-[1.02] disabled:hover:scale-100"
+                        className="px-5 py-3 bg-nexo-500 hover:bg-nexo-600 text-white rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-lg shadow-nexo-500/20 disabled:shadow-none hover:scale-[1.02] disabled:hover:scale-100"
                       >
                         {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                       </button>
@@ -1984,56 +1960,62 @@ export default function AICodeGenerator() {
             </div>
           </div>
 
-          {/* 右侧面板 - 预览 & 代码 (占 8-9 列，更大的预览区) */}
-          <div className="glass rounded-xl overflow-hidden flex flex-col h-[calc(100vh-200px)] min-h-[600px] shadow-2xl shadow-black/30 border border-surface-700/30">
-            {/* 顶部栏：标签 + 预览控制 */}
-            <div className="flex items-center border-b border-surface-700/50 bg-surface-900/70">
-              <div className="flex items-center gap-1 px-3">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
-                <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
+          {/* 右侧面板 - 预览 & 代码 - 改进布局 */}
+          <div className="relative rounded-2xl overflow-hidden flex flex-col h-[calc(100vh-180px)] min-h-[650px] shadow-xl border border-surface-700/30 bg-surface-900/50 backdrop-blur-sm">
+            {/* 顶部栏：标签 + 预览控制 - 改进布局 */}
+            <div className="flex items-center justify-between border-b border-surface-700/40 bg-surface-900/60 backdrop-blur-sm px-4 py-3">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
+                </div>
+                <div className="h-4 w-px bg-surface-700/50" />
+
+                {/* 切换标签 */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowCodeEditor(false)}
+                    className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all rounded-xl ${
+                      !showCodeEditor 
+                        ? 'text-white bg-surface-800/60' 
+                        : 'text-surface-400 hover:text-white hover:bg-surface-800/40'
+                    }`}
+                  >
+                    <Layers className="w-4 h-4" />
+                    <span>预览</span>
+                  </button>
+                  <button
+                    onClick={() => setShowCodeEditor(true)}
+                    className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all rounded-xl ${
+                      showCodeEditor 
+                        ? 'text-white bg-surface-800/60' 
+                        : 'text-surface-400 hover:text-white hover:bg-surface-800/40'
+                    }`}
+                  >
+                    <Code className="w-4 h-4" />
+                    <span>代码</span>
+                    {projectFiles.length > 0 && (
+                      <span className={`px-2 py-0.5 text-xs rounded-lg ml-1 font-medium ${
+                        showCodeEditor 
+                          ? 'bg-nexo-500/20 text-nexo-400' 
+                          : 'bg-surface-700 text-surface-400'
+                      }`}>
+                        {projectFiles.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
               </div>
-              <div className="h-3 w-px bg-surface-700 mx-2" />
 
-              {/* 切换标签 */}
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setShowCodeEditor(false)}
-                  className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-all rounded-md ${
-                    !showCodeEditor ? 'text-white bg-surface-800/60' : 'text-surface-400 hover:text-white hover:bg-surface-800/40'
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>预览</span>
-                </button>
-                <button
-                  onClick={() => setShowCodeEditor(true)}
-                  className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium transition-all rounded-md ${
-                    showCodeEditor ? 'text-white bg-surface-800/60' : 'text-surface-400 hover:text-white hover:bg-surface-800/40'
-                  }`}
-                >
-                  <Code className="w-3.5 h-3.5" />
-                  <span>代码</span>
-                  {projectFiles.length > 0 && (
-                    <span className={`px-1.5 py-0.5 text-xs rounded-md ml-1 ${
-                      showCodeEditor ? 'bg-nexo-500/20 text-nexo-400' : 'bg-surface-700 text-surface-400'
-                    }`}>
-                      {projectFiles.length}
-                    </span>
-                  )}
-                </button>
-              </div>
-
-              <div className="flex-1" />
-
-              {/* 预览控制 */}
-              <div className="flex items-center gap-2 pr-2">
+              {/* 预览控制 - 右侧对齐 */}
+              <div className="flex items-center gap-3">
                 {projectType !== 'html' && (
                   <>
                     {canStopPreview ? (
                       <button
                         onClick={() => previewRef.current?.stop()}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs rounded-lg transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs rounded-lg transition-colors border border-red-500/30"
                       >
                         <Square className="w-3.5 h-3.5" />
                         停止
@@ -2085,10 +2067,11 @@ export default function AICodeGenerator() {
               </div>
             </div>
             
-            {/* 内容区 */}
+            {/* 内容区 - 改进布局 */}
             <div className="flex-1 overflow-hidden bg-surface-950">
-              <div className="h-full w-full flex">
-                <div className="h-full border-r border-surface-800 bg-surface-900/60 flex flex-col sidebar-container" style={{ width: isSidebarCollapsed ? 12 : sidebarWidth, minWidth: isSidebarCollapsed ? 8 : 240 }}>
+              <div className="h-full w-full flex gap-0">
+                {/* 侧边栏 - 改进布局 */}
+                <div className="h-full border-r border-surface-700/40 bg-surface-900/60 backdrop-blur-sm flex flex-col sidebar-container" style={{ width: isSidebarCollapsed ? 12 : sidebarWidth, minWidth: isSidebarCollapsed ? 8 : 280 }}>
                   {isSidebarCollapsed ? (
                     <div className="flex-1 flex items-center justify-center">
                       <button
@@ -2100,18 +2083,21 @@ export default function AICodeGenerator() {
                       </button>
                     </div>
                   ) : (
-                    <div className="flex flex-col h-full">
-                      {/* 聊天面板 */}
+                    <div className="flex flex-col h-full gap-0">
+                      {/* 聊天面板 - 改进布局 */}
                       <div 
-                        className="flex flex-col border-b border-surface-800/80" 
+                        className="flex flex-col border-b border-surface-700/50" 
                         style={{ 
                           height: isChatCollapsed ? 'auto' : (isFileListCollapsed ? '100%' : `${chatHeight}%`), 
-                          minHeight: isChatCollapsed ? 'auto' : '100px',
+                          minHeight: isChatCollapsed ? 'auto' : '120px',
                           flexShrink: 0
                         }}
                       >
-                        <div className="flex items-center justify-between px-2 py-1 bg-surface-900/70">
-                          <span className="text-xs text-surface-400">AI 助手</span>
+                        <div className="flex items-center justify-between px-4 py-3 bg-surface-900/70 border-b border-surface-700/30">
+                          <span className="text-sm font-semibold text-surface-200 flex items-center gap-2">
+                            <Bot className="w-4 h-4 text-nexo-400" />
+                            AI 助手
+                          </span>
                           <div className="flex items-center gap-1">
                             <button
                               onClick={() => setIsChatCollapsed(!isChatCollapsed)}
@@ -2120,17 +2106,17 @@ export default function AICodeGenerator() {
                             >
                               {isChatCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3 rotate-90" />}
                             </button>
-                            <button
-                              onClick={() => setIsSidebarCollapsed(true)}
-                              className="px-2 py-0.5 text-xs text-surface-400 hover:text-white hover:bg-surface-800 rounded"
+                          <button
+                            onClick={() => setIsSidebarCollapsed(true)}
+                            className="px-2 py-0.5 text-xs text-surface-400 hover:text-white hover:bg-surface-800 rounded"
                               title="折叠侧边栏"
-                            >
-                              ◀
-                            </button>
-                          </div>
+                          >
+                            ◀
+                          </button>
                         </div>
+                      </div>
                         {!isChatCollapsed && (
-                          <div className="flex-1 min-h-0">
+                          <div className="flex-1 min-h-0 p-2">
                             <ChatPanel
                               messages={chatMessages}
                               isLoading={isGenerating}
@@ -2149,24 +2135,27 @@ export default function AICodeGenerator() {
                         )}
                       </div>
 
-                      {/* 垂直分隔条 */}
+                      {/* 垂直分隔条 - 改进布局 */}
                       {!isChatCollapsed && !isFileListCollapsed && (
                         <div
                           onMouseDown={handleVerticalResizeStart}
-                          className={`h-1 cursor-row-resize bg-surface-800 hover:bg-surface-700 ${isResizingVertical ? 'bg-nexo-500' : ''}`}
+                          className={`h-2 cursor-row-resize bg-surface-700/30 hover:bg-surface-600/50 ${isResizingVertical ? 'bg-nexo-500' : ''} transition-colors`}
                           title="拖拽调整高度"
                         />
                       )}
 
-                      {/* 文件列表和 API 列表容器 */}
-                      <div className="flex flex-col flex-1 min-h-0" style={{ 
+                      {/* 文件列表和 API 列表容器 - 改进布局 */}
+                      <div className="flex flex-col flex-1 min-h-0 gap-0" style={{ 
                         height: isChatCollapsed ? '100%' : `${100 - chatHeight}%`,
                         flexShrink: 0
                       }}>
                         {/* 文件列表 */}
-                        <div className="flex flex-col flex-1 min-h-0">
-                          <div className="flex items-center justify-between px-2 py-1 border-b border-surface-800/80 bg-surface-900/70">
-                            <span className="text-xs text-surface-400">文件列表</span>
+                        <div className="flex flex-col flex-1 min-h-0 border-b border-surface-700/30">
+                          <div className="flex items-center justify-between px-4 py-3 bg-surface-900/70">
+                            <span className="text-sm font-semibold text-surface-200 flex items-center gap-2">
+                              <FileCode className="w-4 h-4 text-nexo-400" />
+                              文件列表
+                            </span>
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => setIsFileListCollapsed(!isFileListCollapsed)}
@@ -2177,8 +2166,8 @@ export default function AICodeGenerator() {
                               </button>
                             </div>
                           </div>
-                          {!isFileListCollapsed && (
-                            <div className="flex-1 overflow-y-auto py-1">
+                        {!isFileListCollapsed && (
+                          <div className="flex-1 overflow-y-auto p-2">
                               {projectFiles.length === 0 ? (
                                 <div className="px-2 py-4 text-center text-xs text-surface-500">
                                   暂无文件
@@ -2197,10 +2186,13 @@ export default function AICodeGenerator() {
                           )}
                         </div>
 
-                        {/* API 列表 */}
-                        <div className="flex flex-col border-t border-surface-800/80" style={{ flexShrink: 0, maxHeight: isApiListCollapsed ? 'auto' : '250px' }}>
-                          <div className="flex items-center justify-between px-2 py-1 border-b border-surface-800/80 bg-surface-900/70">
-                            <span className="text-xs text-surface-400">API 列表</span>
+                        {/* API 列表 - 改进布局 */}
+                        <div className="flex flex-col border-t border-surface-700/50" style={{ flexShrink: 0, maxHeight: isApiListCollapsed ? 'auto' : '280px' }}>
+                          <div className="flex items-center justify-between px-4 py-3 bg-surface-900/70">
+                            <span className="text-sm font-semibold text-surface-200 flex items-center gap-2">
+                              <Code2 className="w-4 h-4 text-nexo-400" />
+                              API 列表
+                            </span>
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => setIsApiListCollapsed(!isApiListCollapsed)}
@@ -2212,7 +2204,7 @@ export default function AICodeGenerator() {
                             </div>
                           </div>
                         {!isApiListCollapsed && (
-                          <div className="flex-1 overflow-y-auto py-1" style={{ maxHeight: '200px' }}>
+                          <div className="flex-1 overflow-y-auto p-3" style={{ maxHeight: '240px' }}>
                             {functionsLoading ? (
                               <div className="px-2 py-4 text-center text-xs text-surface-500">
                                 <Loader2 className="w-4 h-4 animate-spin mx-auto mb-2" />
@@ -2236,40 +2228,40 @@ export default function AICodeGenerator() {
                                 {functions.map((fn) => (
                                   <div
                                     key={fn.id}
-                                    className="px-2 py-1.5 mx-1 rounded text-sm hover:bg-surface-800 transition-colors group"
+                                    className="px-3 py-2.5 mb-2 rounded-xl bg-surface-800/40 hover:bg-surface-800/60 border border-surface-700/30 hover:border-surface-600/50 transition-all group"
                                   >
-                                    <div className="flex items-center justify-between mb-1">
-                                      <div className="flex items-center gap-1.5">
-                                        <Code2 className="w-3.5 h-3.5 text-nexo-400" />
-                                        <span className="text-surface-300 font-medium truncate">{fn.name}</span>
+                                    <div className="flex items-start justify-between mb-2">
+                                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                                        <Code2 className="w-4 h-4 text-nexo-400 flex-shrink-0" />
+                                        <span className="text-surface-200 font-semibold text-sm truncate">{fn.name}</span>
                                       </div>
-                                      <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                      <span className={`text-xs px-2 py-1 rounded-lg font-medium flex-shrink-0 ${
                                         fn.status === 'active' 
-                                          ? 'bg-nexo-500/20 text-nexo-400' 
+                                          ? 'bg-nexo-500/20 text-nexo-300 border border-nexo-500/30' 
                                           : 'bg-surface-700 text-surface-400'
                                       }`}>
                                         {fn.status === 'active' ? '运行中' : fn.status}
                                       </span>
                                     </div>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <code className="text-xs text-surface-500 font-mono">{fn.route}</code>
-                                      <div className="flex items-center gap-1">
-                                        {fn.methods.slice(0, 2).map((method) => (
+                                    <div className="flex items-center gap-3 mb-2">
+                                      <code className="text-xs text-surface-400 font-mono bg-surface-900/50 px-2 py-1 rounded">{fn.route}</code>
+                                      <div className="flex items-center gap-1.5">
+                                        {fn.methods.slice(0, 3).map((method) => (
                                           <span
                                             key={method}
-                                            className={`text-[10px] px-1 py-0.5 rounded ${
-                                              method === 'GET' ? 'bg-blue-500/20 text-blue-400' :
-                                              method === 'POST' ? 'bg-green-500/20 text-green-400' :
-                                              method === 'PUT' ? 'bg-yellow-500/20 text-yellow-400' :
-                                              method === 'DELETE' ? 'bg-red-500/20 text-red-400' :
+                                            className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                                              method === 'GET' ? 'bg-blue-500/20 text-blue-300' :
+                                              method === 'POST' ? 'bg-green-500/20 text-green-300' :
+                                              method === 'PUT' ? 'bg-yellow-500/20 text-yellow-300' :
+                                              method === 'DELETE' ? 'bg-red-500/20 text-red-300' :
                                               'bg-surface-700 text-surface-400'
                                             }`}
                                           >
                                             {method}
                                           </span>
                                         ))}
-                                        {fn.methods.length > 2 && (
-                                          <span className="text-[10px] text-surface-500">+{fn.methods.length - 2}</span>
+                                        {fn.methods.length > 3 && (
+                                          <span className="text-[10px] text-surface-500">+{fn.methods.length - 3}</span>
                                         )}
                                       </div>
                                     </div>
@@ -2277,21 +2269,21 @@ export default function AICodeGenerator() {
                                       href={`/functions/${fn.id}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="flex items-center gap-1 mt-1 text-xs text-surface-500 hover:text-nexo-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      className="flex items-center gap-1.5 mt-2 text-xs text-surface-400 hover:text-nexo-300 transition-colors"
                                     >
-                                      <ExternalLinkIcon className="w-3 h-3" />
+                                      <ExternalLinkIcon className="w-3.5 h-3.5" />
                                       查看详情
                                     </a>
                                   </div>
                                 ))}
-                                <div className="px-2 py-1.5 mx-1 mt-2 border-t border-surface-800/50">
+                                <div className="px-3 py-2 mt-3 border-t border-surface-700/30">
                                   <a
                                     href="/functions/new"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="flex items-center justify-center gap-1.5 w-full px-2 py-1.5 text-xs text-nexo-400 hover:text-nexo-300 hover:bg-surface-800 rounded transition-colors"
+                                    className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-medium text-nexo-400 hover:text-nexo-300 hover:bg-surface-800/60 rounded-xl border border-nexo-500/30 hover:border-nexo-500/50 transition-all"
                                   >
-                                    <Plus className="w-3 h-3" />
+                                    <Plus className="w-4 h-4" />
                                     创建新函数
                                   </a>
                                 </div>
@@ -2303,16 +2295,17 @@ export default function AICodeGenerator() {
                       </div>
                     </div>
                   )}
-                </div>
-                {/* 拖拽分隔条 */}
+              </div>
+                {/* 拖拽分隔条 - 改进布局 */}
                 {!isSidebarCollapsed && (
                   <div
                     onMouseDown={handleResizeStart}
-                    className={`w-1 cursor-col-resize bg-surface-800 hover:bg-surface-700 ${isResizing ? 'bg-nexo-500' : ''}`}
+                    className={`w-2 cursor-col-resize bg-surface-700/30 hover:bg-surface-600/50 transition-colors ${isResizing ? 'bg-nexo-500' : ''}`}
                     title="拖拽调整宽度"
                   />
                 )}
-                <div className="flex-1">
+                {/* 主内容区 - 改进布局 */}
+                <div className="flex-1 min-w-0">
                   {showCodeEditor ? (
                     <FileEditor
                       files={projectFiles}
