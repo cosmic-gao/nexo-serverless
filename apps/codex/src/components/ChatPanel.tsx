@@ -8,11 +8,19 @@ interface Message {
   timestamp: Date
 }
 
+interface QuickPrompt {
+  icon: string
+  label: string
+  prompt: string
+}
+
 interface ChatPanelProps {
   onSendMessage?: (message: string) => Promise<void>
   isLoading?: boolean
   messages?: Message[]
   onMessageSubmit?: (message: string) => void
+  quickPrompts?: QuickPrompt[]
+  onQuickPromptClick?: (prompt: string) => void
 }
 
 export default function ChatPanel({
@@ -20,6 +28,8 @@ export default function ChatPanel({
   isLoading = false,
   messages = [],
   onMessageSubmit,
+  quickPrompts = [],
+  onQuickPromptClick,
 }: ChatPanelProps) {
   const [input, setInput] = useState('')
   const [localMessages, setLocalMessages] = useState<Message[]>(messages)
@@ -85,22 +95,38 @@ export default function ChatPanel({
   }
 
   return (
-    <div className="flex flex-col h-full bg-surface-900/50 rounded-xl border border-surface-700">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-surface-700 bg-gradient-to-r from-nexo-500/10 to-transparent">
-        <Sparkles className="w-4 h-4 text-nexo-400" />
-        <h3 className="text-sm font-semibold text-white">AI 助手</h3>
-      </div>
-
+    <div className="flex flex-col h-full bg-surface-900/40 rounded-xl border border-surface-700/50">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {localMessages.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-center">
-            <div>
-              <Sparkles className="w-12 h-12 mx-auto mb-3 text-surface-600" />
-              <p className="text-surface-500 text-sm">开始与 AI 对话</p>
-              <p className="text-surface-600 text-xs mt-1">描述您想要的功能或设计</p>
+          <div className="flex flex-col items-center justify-center h-full">
+            <div className="text-center mb-6">
+              <div className="w-10 h-10 rounded-xl bg-nexo-500/20 flex items-center justify-center mx-auto mb-3">
+                <Sparkles className="w-5 h-5 text-nexo-400" />
+              </div>
+              <p className="text-surface-400 text-sm mb-1">开始与 AI 对话</p>
+              <p className="text-surface-500 text-xs">选择快速模板或输入您的需求</p>
             </div>
+            {quickPrompts.length > 0 && (
+              <div className="w-full max-w-md space-y-2">
+                {quickPrompts.map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={() => {
+                      if (onQuickPromptClick) {
+                        onQuickPromptClick(item.prompt)
+                      }
+                    }}
+                    className="w-full px-4 py-3 bg-surface-800/50 hover:bg-surface-800 border border-surface-700/50 hover:border-nexo-500/30 rounded-lg text-left transition-all group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg">{item.icon}</span>
+                      <span className="text-sm text-surface-300 group-hover:text-nexo-300 transition-colors">{item.label}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <>
@@ -110,10 +136,10 @@ export default function ChatPanel({
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-xs lg:max-w-md xl:max-w-lg px-4 py-2 rounded-lg ${
+                  className={`max-w-xs lg:max-w-md xl:max-w-lg px-3 py-2.5 rounded-lg ${
                     message.role === 'user'
-                      ? 'bg-nexo-500/20 border border-nexo-500/30 text-white'
-                      : 'bg-surface-800 border border-surface-700 text-surface-200'
+                      ? 'bg-nexo-500/15 border border-nexo-500/20 text-nexo-100'
+                      : 'bg-surface-800/60 border border-surface-700/50 text-surface-300'
                   }`}
                 >
                   <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
@@ -145,9 +171,9 @@ export default function ChatPanel({
             ))}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-surface-800 border border-surface-700 rounded-lg px-4 py-3">
+                <div className="bg-surface-800/60 border border-surface-700/50 rounded-lg px-3 py-2.5">
                   <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-nexo-400" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-nexo-400" />
                     <span className="text-sm text-surface-400">AI 正在思考...</span>
                   </div>
                 </div>
@@ -159,7 +185,7 @@ export default function ChatPanel({
       </div>
 
       {/* Input */}
-      <div className="border-t border-surface-700 p-3 bg-surface-900/30">
+      <div className="border-t border-surface-700/40 p-3">
         <div className="flex gap-2">
           <textarea
             ref={inputRef}
@@ -168,13 +194,13 @@ export default function ChatPanel({
             onKeyDown={handleKeyDown}
             placeholder="输入您的需求... (Shift+Enter 换行)"
             disabled={isLoading}
-            className="flex-1 px-3 py-2 bg-surface-800 border border-surface-700 rounded-lg text-sm text-white placeholder-surface-500 focus:outline-none focus:border-nexo-500 resize-none max-h-28 disabled:opacity-50"
+            className="flex-1 px-3 py-2 bg-surface-800/60 border border-surface-700/50 rounded-lg text-sm text-white placeholder-surface-500 focus:outline-none focus:border-nexo-500/50 resize-none max-h-28 disabled:opacity-50"
             rows={1}
           />
           <button
             onClick={handleSendMessage}
             disabled={!input.trim() || isLoading}
-            className="flex items-center justify-center w-10 h-10 bg-nexo-500 hover:bg-nexo-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center w-10 h-10 bg-nexo-500 hover:bg-nexo-500/90 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="发送 (Enter)"
           >
             {isLoading ? (

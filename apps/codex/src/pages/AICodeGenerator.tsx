@@ -1576,107 +1576,79 @@ export default function AICodeGenerator() {
         </div>
         <div className="flex flex-col h-full relative z-10">
             {/* 1. AI 聊天区域 */}
-            <div className={`flex flex-col border-b border-surface-700/30 transition-all overflow-hidden relative ${isChatCollapsed ? '' : 'flex-1 min-h-0'}`}>
-              <div className="absolute inset-0 bg-gradient-to-br from-nexo-500/8 via-nexo-500/3 to-transparent opacity-60 pointer-events-none" />
-              <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-nexo-500/15 via-nexo-500/8 to-transparent border-b border-nexo-500/20 flex-shrink-0 backdrop-blur-md relative z-10 shadow-[0_1px_0_0_rgba(34,197,94,0.1)]">
-                <span className="text-sm font-semibold text-white flex items-center gap-3">
-                  <div className="relative w-8 h-8 rounded-xl bg-gradient-to-br from-nexo-500/40 via-nexo-500/25 to-nexo-500/15 border border-nexo-500/40 flex items-center justify-center shadow-lg shadow-nexo-500/25 backdrop-blur-sm">
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent opacity-50" />
-                    <Bot className="w-4 h-4 text-nexo-300 relative z-10" />
+            <div className={`flex flex-col border-b border-surface-700/40 transition-all overflow-hidden ${isChatCollapsed ? '' : 'flex-1 min-h-0'}`}>
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-surface-700/40 flex-shrink-0">
+                <span className="text-sm font-medium text-nexo-300 flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-nexo-500/20 flex items-center justify-center">
+                    <Bot className="w-4 h-4 text-nexo-400" />
                   </div>
-                  <span className="bg-gradient-to-r from-white via-nexo-200 to-nexo-300 bg-clip-text text-transparent font-medium tracking-wide">AI 助手</span>
+                  <span>AI 助手</span>
                 </span>
                 <button
                   onClick={() => setIsChatCollapsed(!isChatCollapsed)}
-                  className="px-2.5 py-1.5 text-xs text-surface-400 hover:text-nexo-300 hover:bg-nexo-500/20 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 border border-transparent hover:border-nexo-500/30"
+                  className="p-1.5 text-surface-500 hover:text-nexo-400 rounded transition-colors"
                   title={isChatCollapsed ? "展开聊天" : "折叠聊天"}
                 >
-                  {isChatCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5 rotate-90" />}
+                  {isChatCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronDown className="w-4 h-4 rotate-180" />}
                 </button>
               </div>
               {!isChatCollapsed && (
-                <div className="flex-1 min-h-0 flex flex-col">
-                  {/* 模板快捷聊天 */}
-                  {chatMessages.length === 0 && (
-                    <div className="p-4 border-b border-surface-700/20 flex-shrink-0 bg-gradient-to-br from-surface-800/40 via-surface-800/30 to-surface-900/40 backdrop-blur-sm">
-                      <div className="text-xs text-surface-300 mb-3 flex items-center gap-2.5">
-                        <div className="w-1 h-4 bg-gradient-to-b from-nexo-400 via-nexo-500 to-nexo-600 rounded-full shadow-sm shadow-nexo-500/50" />
-                        <span className="font-semibold tracking-wide">快速模板</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2.5">
-                        {quickPrompts.map((item) => (
-                          <button
-                            key={item.label}
-                            onClick={async () => {
-                              const userMessage: Message = { role: 'user', content: item.prompt }
-                              setMessages(prev => [...prev, userMessage])
-                              setChatMessages(prev => [...prev, {
-                                id: Date.now().toString(),
-                                role: 'user',
-                                content: item.prompt,
-                                timestamp: new Date()
-                              }])
-                              setInputValue('')
-                              setIsGenerating(true)
+                <div className="flex-1 min-h-0 flex flex-col p-3">
+                  <ChatPanel
+                    messages={chatMessages}
+                    isLoading={isGenerating}
+                    quickPrompts={quickPrompts.map(({ icon, label, prompt }) => ({ icon, label, prompt }))}
+                    onQuickPromptClick={async (prompt) => {
+                      const userMessage: Message = { role: 'user', content: prompt }
+                      setMessages(prev => [...prev, userMessage])
+                      setChatMessages(prev => [...prev, {
+                        id: Date.now().toString(),
+                        role: 'user',
+                        content: prompt,
+                        timestamp: new Date()
+                      }])
+                      setInputValue('')
+                      setIsGenerating(true)
 
-                              try {
-                                const files = await generateCodeWithAI(item.prompt, projectType, projectFiles)
-                                const assistantMessage: Message = {
-                                  role: 'assistant',
-                                  content: `✨ 已生成 ${projectTypeConfig[projectType].label} 项目！共 ${files.length} 个文件。您可以在右侧预览效果，或切换到"代码"标签编辑代码。`,
-                                }
-                                setMessages(prev => [...prev, assistantMessage])
-                                setChatMessages(prev => [...prev, {
-                                  id: (Date.now() + 1).toString(),
-                                  role: 'assistant',
-                                  content: assistantMessage.content,
-                                  timestamp: new Date()
-                                }])
-                                setProjectFiles(files)
-                                setActiveFile(files[0]?.path || null)
-                              } catch {
-                                const errorMessage: Message = { role: 'assistant', content: '抱歉，生成代码时出现错误，请重试。' }
-                                setMessages(prev => [...prev, errorMessage])
-                                setChatMessages(prev => [...prev, {
-                                  id: (Date.now() + 1).toString(),
-                                  role: 'assistant',
-                                  content: errorMessage.content,
-                                  timestamp: new Date()
-                                }])
-                              } finally {
-                                setIsGenerating(false)
-                              }
-                            }}
-                            className="relative overflow-hidden group p-3 bg-gradient-to-br from-surface-800/70 via-surface-800/50 to-surface-800/40 hover:from-surface-700/80 hover:via-surface-700/60 hover:to-surface-700/50 border border-surface-700/40 hover:border-surface-600/60 rounded-xl text-left transition-all duration-300 hover:scale-[1.03] hover:shadow-lg hover:shadow-nexo-500/20 backdrop-blur-sm"
-                          >
-                            <div className={`absolute inset-0 bg-gradient-to-br ${item.gradient} opacity-0 group-hover:opacity-20 transition-opacity duration-300`} />
-                            <div className="relative flex items-center gap-3">
-                              <span className="text-2xl group-hover:scale-125 transition-transform duration-300 filter drop-shadow-sm">{item.icon}</span>
-                              <span className="text-xs font-semibold text-surface-200 group-hover:text-white transition-colors tracking-wide">{item.label}</span>
-                            </div>
-                            <div className={`absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r ${item.gradient} opacity-0 group-hover:opacity-100 transition-opacity rounded-b-xl`} />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {/* 聊天面板 */}
-                  <div className="flex-1 min-h-0 p-3">
-                    <ChatPanel
-                      messages={chatMessages}
-                      isLoading={isGenerating}
-                      onMessageSubmit={(message) => {
+                      try {
+                        const files = await generateCodeWithAI(prompt, projectType, projectFiles)
+                        const assistantMessage: Message = {
+                          role: 'assistant',
+                          content: `✨ 已生成 ${projectTypeConfig[projectType].label} 项目！共 ${files.length} 个文件。您可以在右侧预览效果，或切换到"代码"标签编辑代码。`,
+                        }
+                        setMessages(prev => [...prev, assistantMessage])
                         setChatMessages(prev => [...prev, {
-                          id: Date.now().toString(),
-                          role: 'user',
-                          content: message,
+                          id: (Date.now() + 1).toString(),
+                          role: 'assistant',
+                          content: assistantMessage.content,
                           timestamp: new Date()
                         }])
-                        setInputValue(message)
-                        handleSendMessage()
-                      }}
-                    />
-                  </div>
+                        setProjectFiles(files)
+                        setActiveFile(files[0]?.path || null)
+                      } catch {
+                        const errorMessage: Message = { role: 'assistant', content: '抱歉，生成代码时出现错误，请重试。' }
+                        setMessages(prev => [...prev, errorMessage])
+                        setChatMessages(prev => [...prev, {
+                          id: (Date.now() + 1).toString(),
+                          role: 'assistant',
+                          content: errorMessage.content,
+                          timestamp: new Date()
+                        }])
+                      } finally {
+                        setIsGenerating(false)
+                      }
+                    }}
+                    onMessageSubmit={(message) => {
+                      setChatMessages(prev => [...prev, {
+                        id: Date.now().toString(),
+                        role: 'user',
+                        content: message,
+                        timestamp: new Date()
+                      }])
+                      setInputValue(message)
+                      handleSendMessage()
+                    }}
+                  />
                 </div>
               )}
             </div>
