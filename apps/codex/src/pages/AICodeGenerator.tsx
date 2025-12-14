@@ -1339,7 +1339,7 @@ export default function AICodeGenerator() {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
-  const [projectType] = useState<ProjectType>('react')
+  const [projectType, setProjectType] = useState<ProjectType>('react')
   const [projectFiles, setProjectFiles] = useState<ProjectFile[]>(() => {
     // 初始化时加载React模板
     const template = getTemplate('react')
@@ -1480,10 +1480,10 @@ export default function AICodeGenerator() {
 
   // 模板快捷聊天
   const quickPrompts = [
-    { icon: '🚀', label: 'Landing Page', prompt: '创建一个现代的产品着陆页', gradient: 'from-violet-500 to-purple-600' },
-    { icon: '📊', label: 'Dashboard', prompt: '创建一个数据仪表盘页面', gradient: 'from-blue-500 to-cyan-500' },
-    { icon: '🔐', label: '登录页面', prompt: '创建一个漂亮的登录表单', gradient: 'from-amber-500 to-orange-500' },
-    { icon: '✅', label: 'Todo 应用', prompt: '创建一个待办事项应用', gradient: 'from-emerald-500 to-teal-500' },
+    { icon: '🚀', label: 'Landing Page', prompt: '创建一个现代的产品着陆页', gradient: 'from-violet-500 to-purple-600', projectType: 'html' as ProjectType },
+    { icon: '📊', label: 'Dashboard', prompt: '创建一个数据仪表盘页面', gradient: 'from-blue-500 to-cyan-500', projectType: 'html' as ProjectType },
+    { icon: '🔐', label: '登录页面', prompt: '创建一个漂亮的登录表单', gradient: 'from-amber-500 to-orange-500', projectType: 'html' as ProjectType },
+    { icon: '✅', label: 'Todo 应用', prompt: '创建一个待办事项应用', gradient: 'from-emerald-500 to-teal-500', projectType: 'react' as ProjectType },
   ]
 
   // 发布功能
@@ -1640,8 +1640,21 @@ export default function AICodeGenerator() {
                   <ChatPanel
                     messages={chatMessages}
                     isLoading={isGenerating}
-                    quickPrompts={quickPrompts.map(({ icon, label, prompt }) => ({ icon, label, prompt }))}
-                    onQuickPromptClick={async (prompt) => {
+                    quickPrompts={quickPrompts.map(({ icon, label, prompt, projectType: pt }) => ({ icon, label, prompt, projectType: pt }))}
+                    onQuickPromptClick={async (prompt, newProjectType) => {
+                      // 如果指定了新的项目类型，先切换模板
+                      let currentProjectType = projectType
+                      let currentProjectFiles = projectFiles
+                      
+                      if (newProjectType && newProjectType !== projectType) {
+                        currentProjectType = newProjectType
+                        setProjectType(newProjectType)
+                        const template = getTemplate(newProjectType)
+                        currentProjectFiles = template.files
+                        setProjectFiles(template.files)
+                        setActiveFile(template.entryFile)
+                      }
+
                       const userMessage: Message = { role: 'user', content: prompt }
                       setMessages(prev => [...prev, userMessage])
                       setChatMessages(prev => [...prev, {
@@ -1654,10 +1667,10 @@ export default function AICodeGenerator() {
                       setIsGenerating(true)
 
                       try {
-                        const files = await generateCodeWithAI(prompt, projectType, projectFiles)
+                        const files = await generateCodeWithAI(prompt, currentProjectType, currentProjectFiles)
                         const assistantMessage: Message = {
                           role: 'assistant',
-                          content: `✨ 已生成 ${projectTypeConfig[projectType].label} 项目！共 ${files.length} 个文件。您可以在右侧预览效果，或切换到"代码"标签编辑代码。`,
+                          content: `✨ 已生成 ${projectTypeConfig[currentProjectType].label} 项目！共 ${files.length} 个文件。您可以在右侧预览效果，或切换到"代码"标签编辑代码。`,
                         }
                         setMessages(prev => [...prev, assistantMessage])
                         setChatMessages(prev => [...prev, {
@@ -1682,6 +1695,14 @@ export default function AICodeGenerator() {
                       }
                     }}
                     onMessageSubmit={(message) => {
+                      // 如果当前项目类型不是 react，先切换到 react 模板
+                      if (projectType !== 'react') {
+                        setProjectType('react')
+                        const template = getTemplate('react')
+                        setProjectFiles(template.files)
+                        setActiveFile(template.entryFile)
+                      }
+                      
                       setChatMessages(prev => [...prev, {
                         id: Date.now().toString(),
                         role: 'user',

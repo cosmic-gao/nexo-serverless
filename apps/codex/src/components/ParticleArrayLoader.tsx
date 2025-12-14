@@ -126,38 +126,62 @@ void main() {
 }
 `
 
-// Fragment Shader
+// Fragment Shader - 与 a.js 完全一致
 const fragmentShader = `
 varying vec2 vUv;
 varying float noise;
 varying vec3 pos;
 uniform float time;
-uniform sampler2D particleTexture;
+uniform sampler2D uTexture;
 
 void main() {
-  // 黑白和蓝色渐变效果（与 a.js 一致）
+  // 与 a.js 完全一致的颜色计算
   float r = 1. - 2.0 * noise;
   float g = 0.0;
   float b = 1. - 1.0 * noise;
-  vec3 color = vec3(r*2.0, g, b*1.5);
+  vec3 foo = vec3(r*2.0, g, b*1.5);
   
-  // 应用纹理和透明度
-  vec4 texColor = texture2D(particleTexture, gl_PointCoord);
-  gl_FragColor = vec4(color, 1.0) * texColor;
+  // 应用纹理 - 与 a.js 一致
+  vec4 texColor = texture2D(uTexture, gl_PointCoord);
+  gl_FragColor = vec4(foo, 1.0) * texColor;
   
-  if (gl_FragColor.a < 0.9) discard;
+  // 降低 alpha 测试阈值，确保十字形粒子可见
+  if (gl_FragColor.a < 0.1) discard;
 }
 `
 
+// 创建十字形纹理 - 与参考效果一致
 function createCircleTexture(resolution = 64, radius = 32, color = '#ffffff'): HTMLCanvasElement {
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')!
   canvas.height = resolution
   canvas.width = resolution
+  
+  const centerX = resolution / 2
+  const centerY = resolution / 2
+  
+  // 绘制十字形
+  const crossLength = radius * 0.8 // 十字的长度
+  const crossWidth = Math.max(4, radius * 0.25) // 十字的宽度
+  
   ctx.fillStyle = color
-  ctx.beginPath()
-  ctx.arc(resolution / 2, resolution / 2, radius, 0, Math.PI * 2)
-  ctx.fill()
+  
+  // 水平线
+  ctx.fillRect(
+    centerX - crossLength, 
+    centerY - crossWidth / 2, 
+    crossLength * 2, 
+    crossWidth
+  )
+  
+  // 垂直线
+  ctx.fillRect(
+    centerX - crossWidth / 2, 
+    centerY - crossLength, 
+    crossWidth, 
+    crossLength * 2
+  )
+  
   return canvas
 }
 
@@ -241,72 +265,79 @@ export default function ParticleArrayLoader({ status, message }: ParticleArrayLo
     if (!containerRef.current) return
 
     const container = containerRef.current
-    const width = container.offsetWidth
-    const height = container.offsetHeight
+    // 确保容器有尺寸
+    const width = container.offsetWidth || window.innerWidth
+    const height = container.offsetHeight || window.innerHeight
 
-    // 创建渲染器 - 优化抗锯齿和性能
+    if (width === 0 || height === 0) {
+      console.warn('ParticleArrayLoader: Container has no size')
+      return
+    }
+
+    // 创建渲染器 - 与 a.js 完全一致
     const renderer = new THREE.WebGLRenderer({ 
       antialias: true, 
-      alpha: true,
-      precision: 'highp',
-      powerPreference: 'high-performance'
+      alpha: true
     })
     renderer.setSize(width, height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)) // 限制像素比以提高性能
-    renderer.setClearColor(0x0a0a1a, 1)
-    renderer.outputColorSpace = THREE.SRGBColorSpace
+    renderer.setPixelRatio(window.devicePixelRatio)
+    renderer.setClearColor(0x000000, 0) // 透明背景
     container.appendChild(renderer.domElement)
 
-    // 创建场景和相机
+    // 创建场景和相机 - 与 a.js 一致
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000)
-    camera.position.set(80, 0, 0)
+    camera.position.set(80, 0, 0) // 与 a.js 一致
     camera.lookAt(scene.position)
     scene.add(camera)
 
-    // 创建几何体 - 使用更高细节的球体
-    const geo = new THREE.IcosahedronGeometry(20, 5)
-    const vertices = geo.attributes.position.array as Float32Array
-    const vertexCount = vertices.length / 3
+    // 创建几何体 - 增加细分级别使粒子更密集（与参考效果一致）
+    const geo = new THREE.IcosahedronGeometry(20, 7)
+    // 在新版 Three.js 中，顶点数据在 attributes.position.array 中
+    const positionAttr = geo.attributes.position
+    const vertexCount = positionAttr.count
     const positions = new Float32Array(vertexCount * 3)
     const sizes = new Float32Array(vertexCount)
 
-    // 初始化顶点和大小
+    // 初始化顶点和大小 - 与 a.js 一致
+    const PARTICLE_SIZE = 1
+    // 复制顶点数据，确保与 a.js 的处理方式一致
     for (let i = 0; i < vertexCount; i++) {
-      positions[i * 3] = vertices[i * 3]
-      positions[i * 3 + 1] = vertices[i * 3 + 1]
-      positions[i * 3 + 2] = vertices[i * 3 + 2]
-      sizes[i] = 1.0
+      positions[i * 3] = positionAttr.getX(i)
+      positions[i * 3 + 1] = positionAttr.getY(i)
+      positions[i * 3 + 2] = positionAttr.getZ(i)
+      sizes[i] = PARTICLE_SIZE
     }
 
-    // 创建缓冲几何
+    // 创建缓冲几何 - 与 a.js 完全一致
     const bufferGeo = new THREE.BufferGeometry()
     bufferGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     bufferGeo.setAttribute('size', new THREE.BufferAttribute(sizes, 1))
 
-    // 创建粒子纹理
-    const circleCanvas = createCircleTexture(64, 32, '#ffffff')
+    // 创建粒子纹理 - 与 a.js 完全一致
+    const textureAttr = {
+      resolution: 64,
+      radius: 32,
+      color: '#ffffff'
+    }
+    const circleCanvas = createCircleTexture(textureAttr.resolution, textureAttr.radius, textureAttr.color)
     const texture = new THREE.CanvasTexture(circleCanvas)
     texture.wrapS = THREE.RepeatWrapping
     texture.wrapT = THREE.RepeatWrapping
-    texture.magFilter = THREE.LinearFilter
-    texture.minFilter = THREE.LinearMipmapLinearFilter
 
-    // 创建着色器材料
+    // 创建着色器材料 - 调整 alphaTest 确保十字形粒子可见
     const material = new THREE.ShaderMaterial({
       uniforms: {
         time: { value: 0.0 },
-        particleTexture: { value: texture }
+        uTexture: { value: texture }
       },
       vertexShader,
       fragmentShader,
       transparent: true,
-      depthWrite: false,
-      blending: THREE.AdditiveBlending,
-      side: THREE.DoubleSide
+      alphaTest: 0.1 // 降低阈值，确保十字形粒子可见
     })
 
-    // 创建点云
+    // 创建点云 - 与 a.js 完全一致
     const sphere = new THREE.Points(bufferGeo, material)
     sphere.rotation.set(0, Math.PI, 0)
     scene.add(sphere)
@@ -321,15 +352,12 @@ export default function ParticleArrayLoader({ status, message }: ParticleArrayLo
     }
     window.addEventListener('resize', handleResize)
 
-    // 动画循环
+    // 动画循环 - 与 a.js 完全一致
     let animationId = 0
     
     const animate = () => {
-      // 更新时间uniform
+      // 更新时间uniform - 与 a.js 一致
       material.uniforms.time.value += 0.0025
-      
-      // 平滑旋转
-      sphere.rotation.y += 0.003
       
       // 渲染场景
       renderer.render(scene, camera)
@@ -354,187 +382,166 @@ export default function ParticleArrayLoader({ status, message }: ParticleArrayLo
   }, [])
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center overflow-hidden" style={{ background: '#0a0a1a' }}>
-      {/* Three.js 容器 */}
-      <div ref={containerRef} className="absolute inset-0 w-full h-full" />
-      
-      {/* 渐变遮罩 */}
-      <div className="absolute inset-0 pointer-events-none" style={{
-        background: 'radial-gradient(circle at center, transparent 25%, rgba(10, 10, 26, 0.6) 65%, rgba(10, 10, 26, 0.95) 100%)'
-      }} />
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Three.js 容器 - 粒子效果占据全屏 */}
+      <div ref={containerRef} className="absolute inset-0 w-full h-full z-0" />
 
-      {/* 主内容面板 */}
-      <div className="relative z-10 w-full max-w-md mx-4">
-        {/* 玻璃卡片 */}
-        <div 
-          className="backdrop-blur-2xl rounded-3xl p-8 border border-white/20"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 2px rgba(255,255,255,0.15), 0 0 60px rgba(217, 70, 239, 0.1)'
-          }}
-        >
-          {/* 步骤指示器 */}
-          <div className="flex items-center justify-center gap-2 mb-10">
-            {[1, 2, 3].map((step) => (
-              <div key={step} className="flex items-center">
-                <div 
-                  className={`
-                    w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold
-                    transition-all duration-500 ease-out relative
-                    ${step < statusConfig.step 
-                      ? 'bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-lg shadow-purple-500/40 scale-100' 
-                      : step === statusConfig.step 
-                        ? 'bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-lg shadow-purple-500/60 scale-125' 
-                        : 'bg-white/10 text-white/40 border border-white/20'}
-                  `}
-                >
-                  {step < statusConfig.step ? (
-                    <span className="text-lg">✓</span>
-                  ) : (
-                    step
-                  )}
-                  {step === statusConfig.step && (
-                    <div className="absolute inset-0 rounded-full animate-pulse" style={{
-                      background: 'radial-gradient(circle, rgba(217, 70, 239, 0.3), transparent)',
-                      border: '2px solid rgba(217, 70, 239, 0.5)'
-                    }} />
-                  )}
-                </div>
-                {step < 3 && (
-                  <div className="w-14 h-1 mx-1 rounded-full overflow-hidden bg-white/10 border border-white/5">
-                    <div 
-                      className="h-full bg-gradient-to-r from-fuchsia-500 to-purple-600 transition-all duration-500 relative"
-                      style={{ width: step < statusConfig.step ? '100%' : '0%' }}
-                    >
-                      {step < statusConfig.step && (
-                        <div className="absolute inset-0 opacity-50" style={{
-                          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-                          animation: 'shimmer 2s infinite'
-                        }} />
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* 图标 */}
-          <div className="flex justify-center mb-8">
-            <div 
-              className="w-24 h-24 rounded-3xl flex items-center justify-center text-5xl relative"
-              style={{
-                background: 'linear-gradient(135deg, rgba(217, 70, 239, 0.25) 0%, rgba(139, 92, 246, 0.25) 100%)',
-                boxShadow: '0 0 80px rgba(217, 70, 239, 0.4), inset 0 1px 2px rgba(255,255,255,0.2)',
-                border: '1px solid rgba(255,255,255,0.1)'
-              }}
-            >
-              <span className="animate-bounce drop-shadow-lg">{statusConfig.icon}</span>
-              {/* 脉冲环 */}
-              <div className="absolute inset-0 rounded-3xl animate-pulse opacity-30" style={{
-                background: 'linear-gradient(135deg, #d946ef, #8b5cf6)',
-                border: '2px solid rgba(217, 70, 239, 0.3)'
-              }} />
-            </div>
-          </div>
-
-          {/* 标题 */}
-          <h2 
-            className="text-3xl font-bold text-center mb-3 tracking-tight"
-            style={{
-              background: 'linear-gradient(135deg, #f0abfc 0%, #c084fc 50%, #a78bfa 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              textShadow: '0 2px 10px rgba(217, 70, 239, 0.2)'
-            }}
-          >
-            {statusConfig.title}{dots}
-          </h2>
-          
-          <p className="text-center text-white/60 text-sm mb-10 font-medium leading-relaxed">
-            {statusConfig.subtitle}
-          </p>
-
-          {/* 进度条 */}
-          <div className="relative mb-6">
-            <div className="h-2.5 rounded-full bg-white/5 overflow-hidden border border-white/10">
-              <div 
-                className="h-full rounded-full transition-all duration-300 ease-out relative"
-                style={{ 
-                  width: `${displayProgress}%`,
-                  background: 'linear-gradient(90deg, #d946ef 0%, #8b5cf6 50%, #6366f1 100%)',
-                  boxShadow: '0 0 20px rgba(217, 70, 239, 0.6), inset 0 0 10px rgba(255,255,255,0.2)'
-                }}
-              >
-                {/* 闪光效果 */}
-                <div 
-                  className="absolute inset-0 opacity-60"
+      {/* 全新设计 - 极简、聚焦、动态 */}
+      <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-auto">
+        <div className="relative w-full max-w-2xl mx-4">
+          {/* 主视觉区域 - 圆形进度环设计 */}
+          <div className="flex flex-col items-center justify-center gap-8">
+            
+            {/* 大型圆形进度指示器 - 替代传统进度条 */}
+            <div className="relative w-48 h-48">
+              {/* 外圈进度环 */}
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 200 200">
+                <circle
+                  cx="100"
+                  cy="100"
+                  r="90"
+                  fill="none"
+                  stroke="rgba(255, 255, 255, 0.1)"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                />
+                <circle
+                  cx="100"
+                  cy="100"
+                  r="90"
+                  fill="none"
+                  stroke="url(#progressGradient)"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={`${2 * Math.PI * 90}`}
+                  strokeDashoffset={`${2 * Math.PI * 90 * (1 - displayProgress / 100)}`}
+                  className="transition-all duration-500 ease-out"
                   style={{
-                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)',
-                    animation: 'shimmer 2s infinite'
+                    filter: 'drop-shadow(0 0 20px rgba(168, 85, 247, 0.6))'
                   }}
                 />
+                <defs>
+                  <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#a855f7" />
+                    <stop offset="50%" stopColor="#9333ea" />
+                    <stop offset="100%" stopColor="#7c3aed" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              
+              {/* 中心内容 */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <div 
+                  className="text-5xl mb-2"
+                  style={{
+                    filter: 'drop-shadow(0 0 12px rgba(139, 92, 246, 0.8))',
+                    animation: 'icon-pulse 2s ease-in-out infinite'
+                  }}
+                >
+                  {statusConfig.icon}
+                </div>
+                <div 
+                  className="text-4xl font-black font-mono tabular-nums"
+                  style={{
+                    background: 'linear-gradient(135deg, #e9d5ff 0%, #c084fc 50%, #9333ea 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    letterSpacing: '-0.05em'
+                  }}
+                >
+                  {Math.round(displayProgress)}%
+                </div>
               </div>
-            </div>
-            
-            {/* 进度百分比 */}
-            <div className="flex justify-between mt-3 text-xs">
-              <span className="text-white/50 font-medium">进度</span>
-              <span 
-                className="font-mono font-bold text-sm"
+              
+              {/* 旋转光效 */}
+              <div 
+                className="absolute inset-0 rounded-full"
                 style={{
-                  background: 'linear-gradient(135deg, #d946ef, #8b5cf6)',
+                  background: 'conic-gradient(from 0deg, transparent 0deg, rgba(168, 85, 247, 0.3) 60deg, transparent 120deg)',
+                  animation: 'rotate-glow 3s linear infinite',
+                  filter: 'blur(20px)'
+                }}
+              />
+            </div>
+
+            {/* 状态文本 - 极简设计 */}
+            <div className="text-center space-y-3">
+              <h2 
+                className="text-3xl font-bold tracking-tight"
+                style={{
+                  background: 'linear-gradient(135deg, #ffffff 0%, #e9d5ff 50%, #c084fc 100%)',
                   WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent'
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  letterSpacing: '-0.03em'
                 }}
               >
-                {Math.round(displayProgress)}%
-              </span>
+                {statusConfig.title}
+              </h2>
+              <p className="text-white/60 text-sm font-medium tracking-wide">
+                {statusConfig.subtitle}
+              </p>
             </div>
-          </div>
 
-          {/* 状态消息 */}
-          <div 
-            className="rounded-xl p-4 border border-white/10 backdrop-blur-sm"
-            style={{ 
-              background: 'linear-gradient(135deg, rgba(217, 70, 239, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%)',
-              boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.1)'
-            }}
-          >
-            <div className="flex items-center gap-3">
-              <div className="relative flex-shrink-0">
-                <div className="w-2 h-2 rounded-full bg-fuchsia-500" />
-                <div className="absolute inset-0 w-2 h-2 rounded-full bg-fuchsia-500 animate-pulse" />
-              </div>
-              <code className="text-xs text-white/80 font-mono truncate flex-1">
-                {message}
+            {/* 动态状态指示 - 流动的粒子效果 */}
+            <div className="relative w-full max-w-md h-1 overflow-hidden">
+              <div 
+                className="absolute inset-0"
+                style={{
+                  background: 'linear-gradient(90deg, transparent 0%, rgba(168, 85, 247, 0.3) 50%, transparent 100%)',
+                  backgroundSize: '200% 100%',
+                  animation: 'flow 2s linear infinite',
+                  transform: `scaleX(${displayProgress / 100})`,
+                  transformOrigin: 'left'
+                }}
+              />
+            </div>
+
+            {/* 实时消息 - 终端风格 */}
+            <div className="mt-4 px-4 py-2 rounded-lg backdrop-blur-sm bg-black/20 border border-white/10">
+              <code className="text-xs text-white/70 font-mono flex items-center gap-2">
+                <span 
+                  className="inline-block w-1.5 h-1.5 rounded-full"
+                  style={{
+                    background: 'linear-gradient(135deg, #a855f7, #9333ea)',
+                    boxShadow: '0 0 8px rgba(168, 85, 247, 0.8)',
+                    animation: 'blink 1.5s ease-in-out infinite'
+                  }}
+                />
+                <span className="text-white/90">{message}</span>
               </code>
             </div>
           </div>
-
-          {/* 底部提示 */}
-          <p className="text-center text-white/40 text-xs mt-8 leading-relaxed font-medium">
-            首次加载可能需要 30-60 秒，请耐心等待
-          </p>
         </div>
       </div>
 
-      {/* 装饰元素 */}
-      <div className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full blur-3xl opacity-25 pointer-events-none animate-pulse"
-        style={{ background: 'radial-gradient(circle, #d946ef, transparent)' }} 
-      />
-      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full blur-3xl opacity-25 pointer-events-none animate-pulse"
-        style={{ background: 'radial-gradient(circle, #8b5cf6, transparent)', animationDelay: '0.5s' }} 
-      />
-      <div className="absolute top-1/2 right-1/4 w-64 h-64 rounded-full blur-3xl opacity-15 pointer-events-none"
-        style={{ background: 'radial-gradient(circle, #6366f1, transparent)' }} 
-      />
-
-      {/* 闪光动画 CSS */}
+      {/* 动画 CSS */}
       <style>{`
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
+        @keyframes icon-pulse {
+          0%, 100% { 
+            transform: scale(1) rotate(0deg);
+            filter: drop-shadow(0 0 12px rgba(139, 92, 246, 0.8));
+          }
+          50% { 
+            transform: scale(1.1) rotate(5deg);
+            filter: drop-shadow(0 0 20px rgba(139, 92, 246, 1));
+          }
+        }
+        
+        @keyframes rotate-glow {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes flow {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
         }
       `}</style>
     </div>
