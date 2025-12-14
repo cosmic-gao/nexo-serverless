@@ -1357,7 +1357,6 @@ export default function AICodeGenerator() {
   const [_showChatPanel, _setShowChatPanel] = useState(true) // 保留用于未来功能
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [sidebarWidth, setSidebarWidth] = useState<number>(320)
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false)
   const [isChatCollapsed, setIsChatCollapsed] = useState<boolean>(false)
   const [isFileListCollapsed, setIsFileListCollapsed] = useState<boolean>(false)
   const [isApiListCollapsed, setIsApiListCollapsed] = useState<boolean>(false)
@@ -1568,25 +1567,14 @@ export default function AICodeGenerator() {
   return (
     <div className="fixed inset-0 h-screen w-screen overflow-hidden bg-surface-950 flex m-0 p-0">
       {/* 左侧边栏 - 3个可折叠区域 */}
-      <div className="h-full border-r border-surface-700/40 bg-gradient-to-b from-surface-900/90 via-surface-900/80 to-surface-900/90 backdrop-blur-xl flex flex-col sidebar-container shadow-2xl shadow-black/30 relative" style={{ width: isSidebarCollapsed ? 12 : sidebarWidth, minWidth: isSidebarCollapsed ? 8 : 280 }}>
+      <div className="h-full border-r border-surface-700/40 bg-gradient-to-b from-surface-900/90 via-surface-900/80 to-surface-900/90 backdrop-blur-xl flex flex-col sidebar-container shadow-2xl shadow-black/30 relative" style={{ width: sidebarWidth, minWidth: 240 }}>
         {/* 背景装饰 */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div className="absolute top-0 left-0 w-64 h-64 bg-nexo-500/5 rounded-full blur-3xl" />
           <div className="absolute top-1/3 right-0 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl" />
           <div className="absolute bottom-0 left-0 w-56 h-56 bg-purple-500/5 rounded-full blur-3xl" />
         </div>
-        {isSidebarCollapsed ? (
-          <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-surface-900/80 to-surface-900/60">
-            <button
-              onClick={() => setIsSidebarCollapsed(false)}
-              className="w-8 h-8 rounded-lg bg-gradient-to-br from-nexo-500/20 to-nexo-500/10 hover:from-nexo-500/30 hover:to-nexo-500/20 border border-nexo-500/30 hover:border-nexo-500/50 text-nexo-400 hover:text-nexo-300 text-xs transition-all shadow-lg shadow-nexo-500/10 hover:shadow-nexo-500/20"
-              title="展开侧边栏"
-            >
-              ▶
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col h-full relative z-10">
+        <div className="flex flex-col h-full relative z-10">
             {/* 1. AI 聊天区域 */}
             <div className={`flex flex-col border-b border-surface-700/30 transition-all overflow-hidden relative ${isChatCollapsed ? '' : 'flex-1 min-h-0'}`}>
               <div className="absolute inset-0 bg-gradient-to-br from-nexo-500/8 via-nexo-500/3 to-transparent opacity-60 pointer-events-none" />
@@ -1867,32 +1855,15 @@ export default function AICodeGenerator() {
                 </div>
               )}
             </div>
-
-            {/* 折叠侧边栏按钮 */}
-            <div className="px-4 py-2.5 border-t border-surface-700/30 flex-shrink-0 bg-surface-900/50">
-              <button
-                onClick={() => setIsSidebarCollapsed(true)}
-                className="w-full px-2.5 py-1.5 text-xs text-surface-400 hover:text-white hover:bg-gradient-to-r hover:from-surface-800/60 hover:to-surface-800/40 rounded-md text-center transition-all border border-surface-700/30 hover:border-surface-600/50"
-                title="折叠侧边栏"
-              >
-                <div className="flex items-center justify-center gap-1.5">
-                  <span>◀</span>
-                  <span className="hidden group-hover:inline">收起</span>
-                </div>
-              </button>
-            </div>
           </div>
-        )}
       </div>
 
       {/* 拖拽分隔条 */}
-      {!isSidebarCollapsed && (
-        <div
-          onMouseDown={handleResizeStart}
-          className={`w-2 cursor-col-resize bg-surface-700/30 hover:bg-surface-600/50 transition-colors ${isResizing ? 'bg-nexo-500' : ''}`}
-          title="拖拽调整宽度"
-        />
-      )}
+      <div
+        onMouseDown={handleResizeStart}
+        className={`w-1 cursor-col-resize bg-surface-700/40 hover:bg-nexo-500/50 active:bg-nexo-500 transition-all duration-200 ${isResizing ? 'bg-nexo-500 w-1.5' : ''}`}
+        title="拖拽调整宽度"
+      />
 
       {/* 主内容区域 */}
       <div className="flex-1 flex flex-col min-w-0">
