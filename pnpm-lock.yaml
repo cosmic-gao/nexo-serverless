@@ -6,8 +6,16 @@ settings:
 
 importers:
 
-  .:
+  .: {}
+
+  apps/web:
     dependencies:
+      '@nexo/api':
+        specifier: workspace:*
+        version: link:../../packages/api
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       '@types/three':
         specifier: ^0.182.0
         version: 0.182.0
@@ -57,6 +65,22 @@ importers:
       vite:
         specifier: ^6.0.3
         version: 6.4.1(jiti@1.21.7)
+
+  packages/api:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/utils:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
 
 packages:
 

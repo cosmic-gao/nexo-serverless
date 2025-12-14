@@ -42,7 +42,7 @@ $RuntimeJob = Start-Job -ScriptBlock {
 
 $WebJob = Start-Job -ScriptBlock {
     param($ProjectRoot, $PM)
-    Set-Location $ProjectRoot
+    Set-Location "$ProjectRoot\apps\web"
     & $PM dev 2>&1
 } -ArgumentList $ProjectRoot, $PackageManager
 

@@ -227,8 +227,6 @@ export default function WebContainerPreview({
 
   const isRunning = status.state === 'booting' || status.state === 'installing' || status.state === 'starting'
 
-  // 调试状态变化
-  console.log('WebContainerPreview status:', status.state, status.message, 'isRunning:', isRunning)
   const canStop = status.state === 'ready' && projectType !== 'html'
 
   return (

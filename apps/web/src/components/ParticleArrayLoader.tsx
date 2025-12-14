@@ -135,11 +135,16 @@ uniform float time;
 uniform sampler2D particleTexture;
 
 void main() {
+  // 黑白和蓝色渐变效果（与 a.js 一致）
   float r = 1. - 2.0 * noise;
   float g = 0.0;
   float b = 1. - 1.0 * noise;
-  vec3 foo = vec3(r*2.0, g, b*1.5);
-  gl_FragColor = vec4(foo, 1.0) * texture2D(particleTexture, gl_PointCoord);
+  vec3 color = vec3(r*2.0, g, b*1.5);
+  
+  // 应用纹理和透明度
+  vec4 texColor = texture2D(particleTexture, gl_PointCoord);
+  gl_FragColor = vec4(color, 1.0) * texColor;
+  
   if (gl_FragColor.a < 0.9) discard;
 }
 `
@@ -157,8 +162,6 @@ function createCircleTexture(resolution = 64, radius = 32, color = '#ffffff'): H
 }
 
 export default function ParticleArrayLoader({ status, message }: ParticleArrayLoaderProps) {
-  // 调试接收到的props
-  console.log('ParticleArrayLoader received:', { status, message })
   const containerRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<{
     renderer: THREE.WebGLRenderer
@@ -241,24 +244,34 @@ export default function ParticleArrayLoader({ status, message }: ParticleArrayLo
     const width = container.offsetWidth
     const height = container.offsetHeight
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+    // 创建渲染器 - 优化抗锯齿和性能
+    const renderer = new THREE.WebGLRenderer({ 
+      antialias: true, 
+      alpha: true,
+      precision: 'highp',
+      powerPreference: 'high-performance'
+    })
     renderer.setSize(width, height)
-    renderer.setPixelRatio(window.devicePixelRatio)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)) // 限制像素比以提高性能
     renderer.setClearColor(0x0a0a1a, 1)
+    renderer.outputColorSpace = THREE.SRGBColorSpace
     container.appendChild(renderer.domElement)
 
+    // 创建场景和相机
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(45, width / height, 1, 10000)
     camera.position.set(80, 0, 0)
     camera.lookAt(scene.position)
     scene.add(camera)
 
+    // 创建几何体 - 使用更高细节的球体
     const geo = new THREE.IcosahedronGeometry(20, 5)
-    const vertices = geo.attributes.position.array
+    const vertices = geo.attributes.position.array as Float32Array
     const vertexCount = vertices.length / 3
     const positions = new Float32Array(vertexCount * 3)
     const sizes = new Float32Array(vertexCount)
 
+    // 初始化顶点和大小
     for (let i = 0; i < vertexCount; i++) {
       positions[i * 3] = vertices[i * 3]
       positions[i * 3 + 1] = vertices[i * 3 + 1]
@@ -266,15 +279,20 @@ export default function ParticleArrayLoader({ status, message }: ParticleArrayLo
       sizes[i] = 1.0
     }
 
+    // 创建缓冲几何
     const bufferGeo = new THREE.BufferGeometry()
     bufferGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
     bufferGeo.setAttribute('size', new THREE.BufferAttribute(sizes, 1))
 
+    // 创建粒子纹理
     const circleCanvas = createCircleTexture(64, 32, '#ffffff')
     const texture = new THREE.CanvasTexture(circleCanvas)
     texture.wrapS = THREE.RepeatWrapping
     texture.wrapT = THREE.RepeatWrapping
+    texture.magFilter = THREE.LinearFilter
+    texture.minFilter = THREE.LinearMipmapLinearFilter
 
+    // 创建着色器材料
     const material = new THREE.ShaderMaterial({
       uniforms: {
         time: { value: 0.0 },
@@ -284,13 +302,16 @@ export default function ParticleArrayLoader({ status, message }: ParticleArrayLo
       fragmentShader,
       transparent: true,
       depthWrite: false,
-      blending: THREE.AdditiveBlending
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide
     })
 
+    // 创建点云
     const sphere = new THREE.Points(bufferGeo, material)
     sphere.rotation.set(0, Math.PI, 0)
     scene.add(sphere)
 
+    // 处理窗口大小变化
     const handleResize = () => {
       const w = container.offsetWidth
       const h = container.offsetHeight
@@ -300,10 +321,17 @@ export default function ParticleArrayLoader({ status, message }: ParticleArrayLo
     }
     window.addEventListener('resize', handleResize)
 
+    // 动画循环
     let animationId = 0
+    
     const animate = () => {
+      // 更新时间uniform
       material.uniforms.time.value += 0.0025
+      
+      // 平滑旋转
       sphere.rotation.y += 0.003
+      
+      // 渲染场景
       renderer.render(scene, camera)
       animationId = requestAnimationFrame(animate)
     }
@@ -311,6 +339,7 @@ export default function ParticleArrayLoader({ status, message }: ParticleArrayLo
 
     sceneRef.current = { renderer, scene, camera, sphere, animationId }
 
+    // 清理函数
     return () => {
       window.removeEventListener('resize', handleResize)
       cancelAnimationFrame(animationId)
@@ -318,7 +347,9 @@ export default function ParticleArrayLoader({ status, message }: ParticleArrayLo
       material.dispose()
       bufferGeo.dispose()
       texture.dispose()
-      container.removeChild(renderer.domElement)
+      if (container.contains(renderer.domElement)) {
+        container.removeChild(renderer.domElement)
+      }
     }
   }, [])
 
@@ -329,42 +360,59 @@ export default function ParticleArrayLoader({ status, message }: ParticleArrayLo
       
       {/* 渐变遮罩 */}
       <div className="absolute inset-0 pointer-events-none" style={{
-        background: 'radial-gradient(circle at center, transparent 30%, rgba(10, 10, 26, 0.8) 70%)'
+        background: 'radial-gradient(circle at center, transparent 25%, rgba(10, 10, 26, 0.6) 65%, rgba(10, 10, 26, 0.95) 100%)'
       }} />
 
       {/* 主内容面板 */}
       <div className="relative z-10 w-full max-w-md mx-4">
         {/* 玻璃卡片 */}
         <div 
-          className="backdrop-blur-xl rounded-3xl p-8 border border-white/10"
+          className="backdrop-blur-2xl rounded-3xl p-8 border border-white/20"
           style={{
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255,255,255,0.1)'
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), inset 0 1px 2px rgba(255,255,255,0.15), 0 0 60px rgba(217, 70, 239, 0.1)'
           }}
         >
           {/* 步骤指示器 */}
-          <div className="flex items-center justify-center gap-3 mb-8">
+          <div className="flex items-center justify-center gap-2 mb-10">
             {[1, 2, 3].map((step) => (
               <div key={step} className="flex items-center">
                 <div 
                   className={`
-                    w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold
-                    transition-all duration-500 ease-out
+                    w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold
+                    transition-all duration-500 ease-out relative
                     ${step < statusConfig.step 
-                      ? 'bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-lg shadow-purple-500/30' 
+                      ? 'bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-lg shadow-purple-500/40 scale-100' 
                       : step === statusConfig.step 
-                        ? 'bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-lg shadow-purple-500/50 scale-110' 
-                        : 'bg-white/10 text-white/40'}
+                        ? 'bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white shadow-lg shadow-purple-500/60 scale-125' 
+                        : 'bg-white/10 text-white/40 border border-white/20'}
                   `}
                 >
-                  {step < statusConfig.step ? '✓' : step}
+                  {step < statusConfig.step ? (
+                    <span className="text-lg">✓</span>
+                  ) : (
+                    step
+                  )}
+                  {step === statusConfig.step && (
+                    <div className="absolute inset-0 rounded-full animate-pulse" style={{
+                      background: 'radial-gradient(circle, rgba(217, 70, 239, 0.3), transparent)',
+                      border: '2px solid rgba(217, 70, 239, 0.5)'
+                    }} />
+                  )}
                 </div>
                 {step < 3 && (
-                  <div className="w-12 h-0.5 mx-2 rounded-full overflow-hidden bg-white/10">
+                  <div className="w-14 h-1 mx-1 rounded-full overflow-hidden bg-white/10 border border-white/5">
                     <div 
-                      className="h-full bg-gradient-to-r from-fuchsia-500 to-purple-600 transition-all duration-500"
+                      className="h-full bg-gradient-to-r from-fuchsia-500 to-purple-600 transition-all duration-500 relative"
                       style={{ width: step < statusConfig.step ? '100%' : '0%' }}
-                    />
+                    >
+                      {step < statusConfig.step && (
+                        <div className="absolute inset-0 opacity-50" style={{
+                          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                          animation: 'shimmer 2s infinite'
+                        }} />
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -372,53 +420,57 @@ export default function ParticleArrayLoader({ status, message }: ParticleArrayLo
           </div>
 
           {/* 图标 */}
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-8">
             <div 
-              className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl relative"
+              className="w-24 h-24 rounded-3xl flex items-center justify-center text-5xl relative"
               style={{
-                background: 'linear-gradient(135deg, rgba(217, 70, 239, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%)',
-                boxShadow: '0 0 60px rgba(217, 70, 239, 0.3)'
+                background: 'linear-gradient(135deg, rgba(217, 70, 239, 0.25) 0%, rgba(139, 92, 246, 0.25) 100%)',
+                boxShadow: '0 0 80px rgba(217, 70, 239, 0.4), inset 0 1px 2px rgba(255,255,255,0.2)',
+                border: '1px solid rgba(255,255,255,0.1)'
               }}
             >
-              <span className="animate-bounce">{statusConfig.icon}</span>
+              <span className="animate-bounce drop-shadow-lg">{statusConfig.icon}</span>
               {/* 脉冲环 */}
-              <div className="absolute inset-0 rounded-2xl animate-ping opacity-20" style={{
-                background: 'linear-gradient(135deg, #d946ef, #8b5cf6)'
+              <div className="absolute inset-0 rounded-3xl animate-pulse opacity-30" style={{
+                background: 'linear-gradient(135deg, #d946ef, #8b5cf6)',
+                border: '2px solid rgba(217, 70, 239, 0.3)'
               }} />
             </div>
           </div>
 
           {/* 标题 */}
           <h2 
-            className="text-2xl font-bold text-center mb-2"
+            className="text-3xl font-bold text-center mb-3 tracking-tight"
             style={{
-              background: 'linear-gradient(135deg, #f0abfc, #c084fc, #a78bfa)',
+              background: 'linear-gradient(135deg, #f0abfc 0%, #c084fc 50%, #a78bfa 100%)',
               WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
+              WebkitTextFillColor: 'transparent',
+              textShadow: '0 2px 10px rgba(217, 70, 239, 0.2)'
             }}
           >
             {statusConfig.title}{dots}
           </h2>
           
-          <p className="text-center text-white/50 text-sm mb-8">
+          <p className="text-center text-white/60 text-sm mb-10 font-medium leading-relaxed">
             {statusConfig.subtitle}
           </p>
 
           {/* 进度条 */}
-          <div className="relative mb-4">
-            <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+          <div className="relative mb-6">
+            <div className="h-2.5 rounded-full bg-white/5 overflow-hidden border border-white/10">
               <div 
                 className="h-full rounded-full transition-all duration-300 ease-out relative"
                 style={{ 
                   width: `${displayProgress}%`,
-                  background: 'linear-gradient(90deg, #d946ef, #8b5cf6, #6366f1)'
+                  background: 'linear-gradient(90deg, #d946ef 0%, #8b5cf6 50%, #6366f1 100%)',
+                  boxShadow: '0 0 20px rgba(217, 70, 239, 0.6), inset 0 0 10px rgba(255,255,255,0.2)'
                 }}
               >
                 {/* 闪光效果 */}
                 <div 
-                  className="absolute inset-0 opacity-50"
+                  className="absolute inset-0 opacity-60"
                   style={{
-                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)',
                     animation: 'shimmer 2s infinite'
                   }}
                 />
@@ -426,10 +478,10 @@ export default function ParticleArrayLoader({ status, message }: ParticleArrayLo
             </div>
             
             {/* 进度百分比 */}
-            <div className="flex justify-between mt-2 text-xs">
-              <span className="text-white/40">进度</span>
+            <div className="flex justify-between mt-3 text-xs">
+              <span className="text-white/50 font-medium">进度</span>
               <span 
-                className="font-mono font-semibold"
+                className="font-mono font-bold text-sm"
                 style={{
                   background: 'linear-gradient(135deg, #d946ef, #8b5cf6)',
                   WebkitBackgroundClip: 'text',
@@ -443,33 +495,39 @@ export default function ParticleArrayLoader({ status, message }: ParticleArrayLo
 
           {/* 状态消息 */}
           <div 
-            className="rounded-xl p-4 border border-white/5"
-            style={{ background: 'rgba(0,0,0,0.3)' }}
+            className="rounded-xl p-4 border border-white/10 backdrop-blur-sm"
+            style={{ 
+              background: 'linear-gradient(135deg, rgba(217, 70, 239, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%)',
+              boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.1)'
+            }}
           >
             <div className="flex items-center gap-3">
-              <div className="relative">
+              <div className="relative flex-shrink-0">
                 <div className="w-2 h-2 rounded-full bg-fuchsia-500" />
-                <div className="absolute inset-0 w-2 h-2 rounded-full bg-fuchsia-500 animate-ping" />
+                <div className="absolute inset-0 w-2 h-2 rounded-full bg-fuchsia-500 animate-pulse" />
               </div>
-              <code className="text-xs text-white/70 font-mono truncate flex-1">
+              <code className="text-xs text-white/80 font-mono truncate flex-1">
                 {message}
               </code>
             </div>
           </div>
 
           {/* 底部提示 */}
-          <p className="text-center text-white/30 text-xs mt-6">
+          <p className="text-center text-white/40 text-xs mt-8 leading-relaxed font-medium">
             首次加载可能需要 30-60 秒，请耐心等待
           </p>
         </div>
       </div>
 
       {/* 装饰元素 */}
-      <div className="absolute top-1/4 left-1/4 w-64 h-64 rounded-full blur-3xl opacity-20 pointer-events-none"
+      <div className="absolute top-1/4 left-1/4 w-80 h-80 rounded-full blur-3xl opacity-25 pointer-events-none animate-pulse"
         style={{ background: 'radial-gradient(circle, #d946ef, transparent)' }} 
       />
-      <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full blur-3xl opacity-20 pointer-events-none"
-        style={{ background: 'radial-gradient(circle, #8b5cf6, transparent)' }} 
+      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full blur-3xl opacity-25 pointer-events-none animate-pulse"
+        style={{ background: 'radial-gradient(circle, #8b5cf6, transparent)', animationDelay: '0.5s' }} 
+      />
+      <div className="absolute top-1/2 right-1/4 w-64 h-64 rounded-full blur-3xl opacity-15 pointer-events-none"
+        style={{ background: 'radial-gradient(circle, #6366f1, transparent)' }} 
       />
 
       {/* 闪光动画 CSS */}

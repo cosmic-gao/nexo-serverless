@@ -73,7 +73,7 @@ runtime.on('error', (err) => {
 // 启动 Web Console
 console.log(`${colors.magenta}🌐 Starting Web Console...${colors.reset}`);
 const web = spawn('npx', ['vite'], {
-  cwd: projectRoot,
+  cwd: join(projectRoot, 'apps', 'web'),
   shell: true,
   stdio: ['inherit', 'pipe', 'pipe'],
 });

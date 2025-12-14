@@ -1314,7 +1314,7 @@ export default function AICodeGenerator() {
             setPublishStatus(status.message)
           },
           (log) => {
-            console.log('[Build]', log)
+            // Build log handler
           }
         )
         
@@ -1329,24 +1329,19 @@ export default function AICodeGenerator() {
       }
       
       // 使用静态站点 API 部署
-      console.log('[Publish] 正在部署站点，文件数:', filesToDeploy.length)
       const res = await api.deploySite({ 
         files: filesToDeploy,
         project_type: projectType,
       })
-      console.log('[Publish] 部署响应:', res)
       
       if (res.success && res.data) {
-        console.log('[Publish] 部署成功:', res.data.url)
         setPublishedUrl(res.data.url)
         setPublishStatus('')
       } else {
-        console.error('[Publish] 部署失败:', res.error)
         alert('部署失败: ' + (res.error || '未知错误'))
         setPublishStatus('')
       }
     } catch (err) {
-      console.error('Publish error:', err)
       alert('发布失败: ' + (err instanceof Error ? err.message : '未知错误'))
       setPublishStatus('')
     } finally {

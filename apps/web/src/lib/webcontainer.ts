@@ -30,7 +30,6 @@ export async function getWebContainer(): Promise<WebContainer> {
   
   try {
     webcontainerInstance = await bootPromise
-    console.log('WebContainer booted successfully')
     return webcontainerInstance
   } finally {
     isBooting = false

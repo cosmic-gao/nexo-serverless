@@ -57,7 +57,7 @@ cargo run --release &
 RUNTIME_PID=$!
 
 # 启动 Web
-cd "$PROJECT_ROOT"
+cd "$PROJECT_ROOT/apps/web"
 $PM dev &
 WEB_PID=$!
 

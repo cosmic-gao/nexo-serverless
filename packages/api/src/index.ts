@@ -1,6 +1,5 @@
-// API client for Nexo Serverless Runtime
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+// @nexo/api - Browser API client for Nexo Runtime (framework-agnostic)
+// This package avoids bundler-specific globals. Provide baseUrl via ctor.
 
 export interface Function {
   id: string
@@ -101,42 +100,43 @@ export interface ApiResponse<T> {
   error?: string
 }
 
-class NexoAPI {
+export class NexoAPI {
   private baseUrl: string
+  private fetcher: typeof fetch
 
-  constructor(baseUrl: string = API_BASE) {
-    this.baseUrl = baseUrl
+  constructor(baseUrl: string, fetcher?: typeof fetch) {
+    this.baseUrl = baseUrl || ''
+    const rawFetch = fetcher ?? (globalThis.fetch as typeof fetch)
+    if (!rawFetch) {
+      throw new Error('fetch is not available in this environment. Provide a fetch implementation (e.g., undici).')
+    }
+    // 绑定 fetch 以确保正确的 this 上下文，避免 "Illegal invocation" 错误
+    // 如果用户提供了自定义 fetcher，也进行绑定以确保兼容性
+    this.fetcher = rawFetch.bind(globalThis) as typeof fetch
   }
 
-  private async request<T>(
-    path: string,
-    options: RequestInit = {}
-  ): Promise<ApiResponse<T>> {
+  private async request<T>(path: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     try {
-      const response = await fetch(`${this.baseUrl}${path}`, {
+      const response = await this.fetcher(`${this.baseUrl}${path}`, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
-          ...options.headers,
+          ...(options.headers || {}),
         },
       })
 
       const text = await response.text()
-      
-      // 尝试解析 JSON
+
       try {
         const data = JSON.parse(text)
         return data
       } catch {
-        // 如果不是 JSON，返回错误
-        console.error('API response is not JSON:', text)
         return {
           success: false,
           error: response.ok ? 'Invalid response format' : `HTTP ${response.status}: ${text}`,
         }
       }
     } catch (error) {
-      console.error('API request failed:', error)
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -146,17 +146,17 @@ class NexoAPI {
 
   // Health check
   async health() {
-    return this.request<{ status: string; version: string }>('/health')
+    return this.request<{ status: string; version: string }>("/health")
   }
 
   // Get runtime statistics
   async getStats() {
-    return this.request<PoolStats>('/stats')
+    return this.request<PoolStats>("/stats")
   }
 
   // Function CRUD
   async listFunctions() {
-    return this.request<Function[]>('/api/functions')
+    return this.request<Function[]>("/api/functions")
   }
 
   async getFunction(id: string) {
@@ -164,35 +164,35 @@ class NexoAPI {
   }
 
   async createFunction(data: CreateFunctionRequest) {
-    return this.request<Function>('/api/functions', {
-      method: 'POST',
+    return this.request<Function>("/api/functions", {
+      method: "POST",
       body: JSON.stringify(data),
     })
   }
 
   async updateFunction(id: string, data: UpdateFunctionRequest) {
     return this.request<Function>(`/api/functions/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(data),
     })
   }
 
   async deleteFunction(id: string) {
     return this.request<void>(`/api/functions/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     })
   }
 
   // Invoke function
   async invokeFunction(id: string, body?: unknown) {
     return this.request<InvokeResult>(`/api/functions/${id}/invoke`, {
-      method: 'POST',
+      method: "POST",
       body: body ? JSON.stringify(body) : undefined,
     })
   }
 
   // Invoke by route
-  async invokeByRoute(route: string, method: string = 'GET', body?: unknown) {
+  async invokeByRoute(route: string, method: string = "GET", body?: unknown) {
     return this.request<InvokeResult>(`/fn${route}`, {
       method,
       body: body ? JSON.stringify(body) : undefined,
@@ -204,26 +204,14 @@ class NexoAPI {
     const timestamp = Date.now()
     const routePath = data.route || `/preview/${timestamp}`
     const functionName = data.name || `ai-preview-${timestamp}`
-    
-    // 创建一个函数来托管静态 HTML
-    const functionCode = `// 静态 HTML 页面托管函数
-// 由 AI 代码生成器创建
 
-var htmlContent = ${JSON.stringify(data.html)};
-
-function handler(request, ctx) {
-  return new Response(htmlContent, {
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8'
-    }
-  });
-}`
+    const functionCode = `// 静态 HTML 页面托管函数\n// 由 AI 代码生成器创建\n\nvar htmlContent = ${JSON.stringify(data.html)};\n\nfunction handler(request, ctx) {\n  return new Response(htmlContent, {\n    headers: {\n      'Content-Type': 'text/html; charset=utf-8'\n    }\n  });\n}`
 
     const res = await this.createFunction({
       name: functionName,
       code: functionCode,
       route: routePath,
-      methods: ['GET'],
+      methods: ["GET"],
       env: {},
       limits: {
         max_execution_time_ms: 1000,
@@ -253,43 +241,36 @@ function handler(request, ctx) {
   async listPreviews(): Promise<ApiResponse<Function[]>> {
     const res = await this.listFunctions()
     if (res.success && res.data) {
-      const previews = res.data.filter(fn => fn.name.startsWith('ai-preview-'))
+      const previews = res.data.filter((fn) => fn.name.startsWith('ai-preview-'))
       return { success: true, data: previews }
     }
     return res
   }
 
-  // Deploy static site with multiple files (使用独立的静态站点存储)
+  // Static site APIs
   async deploySite(data: DeploySiteRequest): Promise<ApiResponse<DeploySiteResult>> {
-    return this.request<DeploySiteResult>('/api/sites', {
-      method: 'POST',
+    return this.request<DeploySiteResult>("/api/sites", {
+      method: "POST",
       body: JSON.stringify({
         name: data.name,
         route: data.route,
         files: data.files,
-        project_type: data.project_type || 'html',
+        project_type: data.project_type || "html",
       }),
     })
   }
 
-  // 列出所有静态站点
   async listSites(): Promise<ApiResponse<Site[]>> {
-    return this.request<Site[]>('/api/sites')
+    return this.request<Site[]>("/api/sites")
   }
 
-  // 获取站点详情
   async getSite(id: string): Promise<ApiResponse<Site>> {
     return this.request<Site>(`/api/sites/${id}`)
   }
 
-  // 删除站点
   async deleteSite(id: string): Promise<ApiResponse<void>> {
     return this.request<void>(`/api/sites/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     })
   }
 }
-
-export const api = new NexoAPI()
-export default api
-
