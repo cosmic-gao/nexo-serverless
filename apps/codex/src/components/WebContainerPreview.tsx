@@ -185,23 +185,36 @@ const WebContainerPreview = forwardRef<WebContainerPreviewHandle, WebContainerPr
     }
   }, [projectType, previewUrl, renderHtmlPreview, addLog])
 
-  // 热更新 - 当文件变化时更新
+  // 热更新 - 当文件变化时更新（只更新源文件，避免重新挂载整个系统）
+  const prevFilesRef = useRef<ProjectFile[]>([])
+  
   useEffect(() => {
     const updateFiles = async () => {
       if (status.state !== 'ready' || projectType === 'html') return
       
       try {
         const container = await getWebContainer()
-        const tree = filesToFileSystemTree(files)
-        await container.mount(tree)
+        
+        // 只更新变化的源文件（src 目录下的文件），避免触发完整重启
+        for (const file of files) {
+          // 只更新 src 目录下的文件，跳过 package.json 等配置文件
+          if (file.path.startsWith('src/')) {
+            const prevFile = prevFilesRef.current.find(f => f.path === file.path)
+            if (!prevFile || prevFile.content !== file.content) {
+              await container.fs.writeFile(file.path, file.content)
+            }
+          }
+        }
+        
+        prevFilesRef.current = [...files]
         addLog('[HMR] 文件已更新')
       } catch (e) {
         // 忽略更新错误
       }
     }
 
-    // 防抖
-    const timer = setTimeout(updateFiles, 500)
+    // 增加防抖时间，减少频繁更新
+    const timer = setTimeout(updateFiles, 800)
     return () => clearTimeout(timer)
   }, [files, status.state, projectType, addLog])
 

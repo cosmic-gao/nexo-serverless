@@ -1364,10 +1364,13 @@ export default function AICodeGenerator() {
   const [_showChatPanel, _setShowChatPanel] = useState(true) // 保留用于未来功能
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [sidebarWidth, setSidebarWidth] = useState<number>(320)
-  const [isChatCollapsed, setIsChatCollapsed] = useState<boolean>(false)
-  const [isFileListCollapsed, setIsFileListCollapsed] = useState<boolean>(false)
+  // AI 助手不允许折叠，始终展开
+  const isChatCollapsed = false
+  const [isFileListCollapsed, setIsFileListCollapsed] = useState<boolean>(true)  // 默认折叠，让 AI 助手最大化
   const [windowWidth, setWindowWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1920)
-  const [isApiListCollapsed, setIsApiListCollapsed] = useState<boolean>(false)
+  const [isApiListCollapsed, setIsApiListCollapsed] = useState<boolean>(true)   // 默认折叠，让 AI 助手最大化
+  const [apiListHeight, setApiListHeight] = useState<number>(150)  // 工具集默认高度
+  const [fileListHeight, setFileListHeight] = useState<number>(150)  // 文件列表默认高度
   const [functions, setFunctions] = useState<Function[]>([])
   const [functionsLoading, setFunctionsLoading] = useState<boolean>(false)
   const [isResizing, setIsResizing] = useState<boolean>(false)
@@ -1626,32 +1629,21 @@ export default function AICodeGenerator() {
           <div className="absolute bottom-0 left-0 w-56 h-56 bg-indigo-200/30 rounded-full blur-3xl" />
         </div>
         <div className="flex flex-col h-full relative z-10">
-            {/* 1. AI 聊天区域 */}
+            {/* 1. AI 聊天区域 - 最高优先级 */}
             <div className={cn(
               "flex flex-col border-b border-gray-200/60 transition-all overflow-hidden",
-              isChatCollapsed ? '' : 'flex-1 min-h-0'
+              isChatCollapsed ? 'flex-shrink-0' : 'flex-[3] min-h-0'
             )}>
-              <Card className="flex items-center justify-between px-4 py-2.5 border-x-0 border-t-0 rounded-none flex-shrink-0 bg-white/60 backdrop-blur-sm shadow-none">
-                <div className="text-sm font-semibold text-gray-800 flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 via-purple-500 to-purple-600 flex items-center justify-center shadow-md">
-                    <Bot className="w-4 h-4 text-white" />
+              <div 
+                className="group flex items-center justify-between px-3 py-1.5 border-b border-gray-200/40 flex-shrink-0 bg-white/40 backdrop-blur-sm transition-all duration-200"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 via-purple-500 to-purple-600 flex items-center justify-center shadow-sm transition-all duration-200">
+                    <Bot className="w-3.5 h-3.5 text-white" />
                   </div>
-                  <span>AI 助手</span>
+                  <span className="text-xs font-semibold text-gray-700 transition-colors">AI 助手</span>
                 </div>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => setIsChatCollapsed(!isChatCollapsed)}
-                      className="text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                    >
-                      <ChevronDown className={cn("w-4 h-4 transition-transform", !isChatCollapsed && "rotate-180")} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{isChatCollapsed ? "展开聊天" : "折叠聊天"}</TooltipContent>
-                </Tooltip>
-              </Card>
+              </div>
               {!isChatCollapsed && (
                 <div className="flex-1 min-h-0 flex flex-col">
                   <ChatPanel
@@ -1734,93 +1726,60 @@ export default function AICodeGenerator() {
               )}
             </div>
 
-            {/* 2. 文件目录区域 */}
-            <div className={cn(
-              "flex flex-col border-b border-gray-200/60 transition-all overflow-hidden relative",
-              isFileListCollapsed ? '' : 'flex-1 min-h-0'
-            )}>
-              <Card className="flex items-center justify-between px-4 py-2.5 border-x-0 border-t-0 rounded-none flex-shrink-0 bg-white/60 backdrop-blur-sm shadow-none">
-                <div className="text-sm font-semibold text-gray-800 flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
-                    <FileCode className="w-4 h-4 text-white" />
-                  </div>
-                  <span>文件列表</span>
-                  {projectFiles.length > 0 && (
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{projectFiles.length}</Badge>
-                  )}
-                </div>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => setIsFileListCollapsed(!isFileListCollapsed)}
-                      className="text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                    >
-                      <ChevronDown className={cn("w-4 h-4 transition-transform", !isFileListCollapsed && "rotate-180")} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{isFileListCollapsed ? "展开文件列表" : "折叠文件列表"}</TooltipContent>
-                </Tooltip>
-              </Card>
-              {!isFileListCollapsed && (
-                <ScrollArea className="flex-1 p-3 bg-white/30">
-                  {projectFiles.length === 0 ? (
-                    <div className="px-2 py-8 text-center">
-                      <Card className="w-12 h-12 mx-auto mb-3 flex items-center justify-center bg-gray-50 border-gray-200">
-                        <FileCode className="w-6 h-6 text-gray-400" />
-                      </Card>
-                      <div className="text-xs text-gray-500 font-medium">暂无文件</div>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      {buildFileTree(projectFiles).map(node => (
-                        <FileTreeNodeComponent
-                          key={node.path}
-                          node={node}
-                          activeFile={activeFile}
-                          onFileSelect={(path) => {
-                            setActiveFile(path)
-                            setViewMode('code')
-                            setSelectedApi(null)
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </ScrollArea>
-              )}
-            </div>
+            {/* 工具集顶部拖拽调整大小手柄 */}
+            {!isApiListCollapsed && (
+              <div
+                className="h-1.5 cursor-ns-resize group/resize hover:bg-purple-200/50 transition-colors flex items-center justify-center flex-shrink-0"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  const startY = e.clientY
+                  const startHeight = apiListHeight
+                  
+                  const onMouseMove = (moveEvent: MouseEvent) => {
+                    const delta = startY - moveEvent.clientY  // 向上拖动增加高度
+                    const newHeight = Math.max(80, Math.min(400, startHeight + delta))
+                    setApiListHeight(newHeight)
+                  }
+                  
+                  const onMouseUp = () => {
+                    document.removeEventListener('mousemove', onMouseMove)
+                    document.removeEventListener('mouseup', onMouseUp)
+                  }
+                  
+                  document.addEventListener('mousemove', onMouseMove)
+                  document.addEventListener('mouseup', onMouseUp)
+                }}
+              >
+                <div className="w-8 h-0.5 bg-gray-300 group-hover/resize:bg-purple-400 rounded-full transition-colors" />
+              </div>
+            )}
 
-            {/* 3. Function 列表区域 */}
-            <div className={cn(
-              "flex flex-col transition-all overflow-hidden relative",
-              isApiListCollapsed ? '' : 'flex-1 min-h-0'
-            )}>
-              <Card className="flex items-center justify-between px-4 py-2.5 border-x-0 border-t-0 rounded-none flex-shrink-0 bg-white/60 backdrop-blur-sm shadow-none">
-                <div className="text-sm font-semibold text-gray-800 flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-md">
-                    <Code2 className="w-4 h-4 text-white" />
+            {/* 2. 工具集区域 - 次优先级，支持垂直拖拽调整大小 */}
+            <div 
+              className={cn(
+                "flex flex-col border-b border-gray-200/60 overflow-hidden relative",
+                isApiListCollapsed && 'flex-shrink-0'
+              )}
+              style={!isApiListCollapsed ? { height: apiListHeight, minHeight: 80 } : undefined}
+            >
+              <div 
+                className="group flex items-center justify-between px-3 py-1.5 border-b border-gray-200/40 flex-shrink-0 bg-white/40 hover:bg-white/70 backdrop-blur-sm cursor-pointer transition-all duration-200"
+                onClick={() => setIsApiListCollapsed(!isApiListCollapsed)}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
+                    <Code2 className="w-3.5 h-3.5 text-white" />
                   </div>
-                  <span>API 列表</span>
+                  <span className="text-xs font-semibold text-gray-700 group-hover:text-gray-900 transition-colors">工具集</span>
                   {functions.length > 0 && (
-                    <Badge variant="purple" className="text-[10px] px-1.5 py-0">{functions.length}</Badge>
+                    <Badge variant="purple" className="text-[9px] px-1.5 py-0 group-hover:bg-purple-200 transition-colors">{functions.length}</Badge>
                   )}
                 </div>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => setIsApiListCollapsed(!isApiListCollapsed)}
-                      className="text-gray-400 hover:text-purple-600 hover:bg-purple-50"
-                    >
-                      <ChevronDown className={cn("w-4 h-4 transition-transform", !isApiListCollapsed && "rotate-180")} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{isApiListCollapsed ? "展开 API 列表" : "折叠 API 列表"}</TooltipContent>
-                </Tooltip>
-              </Card>
+                <ChevronDown className={cn(
+                  "w-3.5 h-3.5 text-gray-400 group-hover:text-purple-500 transition-all duration-200",
+                  !isApiListCollapsed && "rotate-180"
+                )} />
+              </div>
               {!isApiListCollapsed && (
                 <ScrollArea className="flex-1 p-3 bg-white/30">
                   {functionsLoading ? (
@@ -1922,6 +1881,88 @@ export default function AICodeGenerator() {
                           创建新函数
                         </a>
                       </Button>
+                    </div>
+                  )}
+                </ScrollArea>
+              )}
+            </div>
+
+            {/* 3. 文件目录区域 - 支持垂直拖拽调整大小 */}
+            {/* 文件列表顶部拖拽调整大小手柄 */}
+            {!isFileListCollapsed && (
+              <div
+                className="h-1.5 cursor-ns-resize group/resize hover:bg-blue-200/50 transition-colors flex items-center justify-center flex-shrink-0"
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  const startY = e.clientY
+                  const startHeight = fileListHeight
+                  
+                  const onMouseMove = (moveEvent: MouseEvent) => {
+                    const delta = startY - moveEvent.clientY  // 向上拖动增加高度
+                    const newHeight = Math.max(80, Math.min(400, startHeight + delta))
+                    setFileListHeight(newHeight)
+                  }
+                  
+                  const onMouseUp = () => {
+                    document.removeEventListener('mousemove', onMouseMove)
+                    document.removeEventListener('mouseup', onMouseUp)
+                  }
+                  
+                  document.addEventListener('mousemove', onMouseMove)
+                  document.addEventListener('mouseup', onMouseUp)
+                }}
+              >
+                <div className="w-8 h-0.5 bg-gray-300 group-hover/resize:bg-blue-400 rounded-full transition-colors" />
+              </div>
+            )}
+            <div 
+              className={cn(
+                "flex flex-col overflow-hidden relative",
+                isFileListCollapsed && 'flex-shrink-0'
+              )}
+              style={!isFileListCollapsed ? { height: fileListHeight, minHeight: 80 } : undefined}
+            >
+              <div 
+                className="group flex items-center justify-between px-3 py-1.5 border-b border-gray-200/40 flex-shrink-0 bg-white/40 hover:bg-white/70 backdrop-blur-sm cursor-pointer transition-all duration-200"
+                onClick={() => setIsFileListCollapsed(!isFileListCollapsed)}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-105 transition-all duration-200">
+                    <FileCode className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <span className="text-xs font-semibold text-gray-700 group-hover:text-gray-900 transition-colors">文件列表</span>
+                  {projectFiles.length > 0 && (
+                    <Badge variant="secondary" className="text-[9px] px-1.5 py-0 group-hover:bg-blue-100 group-hover:text-blue-700 transition-colors">{projectFiles.length}</Badge>
+                  )}
+                </div>
+                <ChevronDown className={cn(
+                  "w-3.5 h-3.5 text-gray-400 group-hover:text-blue-500 transition-all duration-200",
+                  !isFileListCollapsed && "rotate-180"
+                )} />
+              </div>
+              {!isFileListCollapsed && (
+                <ScrollArea className="flex-1 p-3 bg-white/30">
+                  {projectFiles.length === 0 ? (
+                    <div className="px-2 py-8 text-center">
+                      <Card className="w-12 h-12 mx-auto mb-3 flex items-center justify-center bg-gray-50 border-gray-200">
+                        <FileCode className="w-6 h-6 text-gray-400" />
+                      </Card>
+                      <div className="text-xs text-gray-500 font-medium">暂无文件</div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {buildFileTree(projectFiles).map(node => (
+                        <FileTreeNodeComponent
+                          key={node.path}
+                          node={node}
+                          activeFile={activeFile}
+                          onFileSelect={(path) => {
+                            setActiveFile(path)
+                            setViewMode('code')
+                            setSelectedApi(null)
+                          }}
+                        />
+                      ))}
                     </div>
                   )}
                 </ScrollArea>
