@@ -26,6 +26,13 @@ import { ProjectFile, ProjectType, getTemplate } from '../lib/projectTemplates'
 import WebContainerPreview, { WebContainerPreviewHandle } from '../components/WebContainerPreview'
 import FileEditor from '../components/FileEditor'
 import ChatPanel from '../components/ChatPanel'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Card } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -1257,7 +1264,7 @@ function buildFileTree(files: ProjectFile[]): FileTreeNode[] {
   return root
 }
 
-// 文件树节点组件
+// 文件树节点组件 - 浅色现代风格
 function FileTreeNodeComponent({
   node,
   activeFile,
@@ -1276,14 +1283,14 @@ function FileTreeNodeComponent({
       <div>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-surface-800/60 rounded-lg text-sm text-surface-300 hover:text-white transition-all group"
+          className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-white/60 rounded-lg text-sm text-gray-700 hover:text-gray-900 transition-all group"
           style={{ paddingLeft: `${level * 12 + 8}px` }}
         >
           <div className="transition-transform group-hover:scale-110">
             {expanded ? (
-              <ChevronDown className="w-3.5 h-3.5 text-surface-500 group-hover:text-surface-400" />
+              <ChevronDown className="w-3.5 h-3.5 text-gray-400 group-hover:text-blue-500" />
             ) : (
-              <ChevronRight className="w-3.5 h-3.5 text-surface-500 group-hover:text-surface-400" />
+              <ChevronRight className="w-3.5 h-3.5 text-gray-400 group-hover:text-blue-500" />
             )}
           </div>
           <span className="font-medium">{node.name}</span>
@@ -1310,8 +1317,8 @@ function FileTreeNodeComponent({
       onClick={() => onFileSelect(node.path)}
       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-all group relative ${
         activeFile === node.path
-          ? 'bg-gradient-to-r from-nexo-500/20 to-nexo-500/10 text-nexo-400 border border-nexo-500/30 shadow-lg shadow-nexo-500/10'
-          : 'text-surface-300 hover:bg-surface-800/60 hover:text-white border border-transparent'
+          ? 'bg-gradient-to-r from-blue-100 to-purple-50 text-blue-700 border border-blue-200 shadow-sm'
+          : 'text-gray-600 hover:bg-white/60 hover:text-gray-900 border border-transparent'
       }`}
       style={{ paddingLeft: `${level * 12 + 8}px` }}
     >
@@ -1320,7 +1327,7 @@ function FileTreeNodeComponent({
       </div>
       <span className="truncate font-medium">{node.name}</span>
       {activeFile === node.path && (
-        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-nexo-400 to-nexo-600 rounded-r-full" />
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-400 to-purple-500 rounded-r-full" />
       )}
     </button>
   )
@@ -1608,35 +1615,45 @@ export default function AICodeGenerator() {
   }, [rightSideWidth])
 
   return (
+    <TooltipProvider>
     <div className="fixed inset-0 h-screen w-screen overflow-hidden bg-surface-950 flex m-0 p-0">
-      {/* 左侧边栏 - 3个可折叠区域 */}
-      <div className="h-full border-r border-surface-700/40 bg-gradient-to-b from-surface-900/90 via-surface-900/80 to-surface-900/90 backdrop-blur-xl flex flex-col sidebar-container shadow-2xl shadow-black/30 relative" style={{ width: sidebarWidth, minWidth: 240 }}>
+      {/* 左侧边栏 - 3个可折叠区域 - shadcn 现代浅色风格 */}
+      <div className="h-full border-r border-gray-200/60 bg-gradient-to-br from-blue-50 via-purple-50 to-blue-50 flex flex-col sidebar-container shadow-xl relative" style={{ width: sidebarWidth, minWidth: 240 }}>
         {/* 背景装饰 */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-0 left-0 w-64 h-64 bg-nexo-500/5 rounded-full blur-3xl" />
-          <div className="absolute top-1/3 right-0 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-56 h-56 bg-purple-500/5 rounded-full blur-3xl" />
+          <div className="absolute top-0 left-0 w-64 h-64 bg-blue-200/30 rounded-full blur-3xl" />
+          <div className="absolute top-1/3 right-0 w-48 h-48 bg-purple-200/30 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-56 h-56 bg-indigo-200/30 rounded-full blur-3xl" />
         </div>
         <div className="flex flex-col h-full relative z-10">
             {/* 1. AI 聊天区域 */}
-            <div className={`flex flex-col border-b border-surface-700/40 transition-all overflow-hidden ${isChatCollapsed ? '' : 'flex-1 min-h-0'}`}>
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-surface-700/40 flex-shrink-0">
-                <span className="text-sm font-medium text-nexo-300 flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-nexo-500/20 flex items-center justify-center">
-                    <Bot className="w-4 h-4 text-nexo-400" />
+            <div className={cn(
+              "flex flex-col border-b border-gray-200/60 transition-all overflow-hidden",
+              isChatCollapsed ? '' : 'flex-1 min-h-0'
+            )}>
+              <Card className="flex items-center justify-between px-4 py-2.5 border-x-0 border-t-0 rounded-none flex-shrink-0 bg-white/60 backdrop-blur-sm shadow-none">
+                <div className="text-sm font-semibold text-gray-800 flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 via-purple-500 to-purple-600 flex items-center justify-center shadow-md">
+                    <Bot className="w-4 h-4 text-white" />
                   </div>
                   <span>AI 助手</span>
-                </span>
-                <button
-                  onClick={() => setIsChatCollapsed(!isChatCollapsed)}
-                  className="p-1.5 text-surface-500 hover:text-nexo-400 rounded transition-colors"
-                  title={isChatCollapsed ? "展开聊天" : "折叠聊天"}
-                >
-                  {isChatCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronDown className="w-4 h-4 rotate-180" />}
-                </button>
-              </div>
+                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setIsChatCollapsed(!isChatCollapsed)}
+                      className="text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                    >
+                      <ChevronDown className={cn("w-4 h-4 transition-transform", !isChatCollapsed && "rotate-180")} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{isChatCollapsed ? "展开聊天" : "折叠聊天"}</TooltipContent>
+                </Tooltip>
+              </Card>
               {!isChatCollapsed && (
-                <div className="flex-1 min-h-0 flex flex-col p-3">
+                <div className="flex-1 min-h-0 flex flex-col">
                   <ChatPanel
                     messages={chatMessages}
                     isLoading={isGenerating}
@@ -1718,32 +1735,42 @@ export default function AICodeGenerator() {
             </div>
 
             {/* 2. 文件目录区域 */}
-            <div className={`flex flex-col border-b border-surface-700/30 transition-all overflow-hidden relative ${isFileListCollapsed ? '' : 'flex-1 min-h-0'}`}>
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/8 via-blue-500/3 to-transparent opacity-60 pointer-events-none" />
-              <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-500/15 via-blue-500/8 to-transparent border-b border-blue-500/20 flex-shrink-0 backdrop-blur-md relative z-10 shadow-[0_1px_0_0_rgba(59,130,246,0.1)]">
-                <span className="text-sm font-semibold text-white flex items-center gap-3">
-                  <div className="relative w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500/40 via-blue-500/25 to-blue-500/15 border border-blue-500/40 flex items-center justify-center shadow-lg shadow-blue-500/25 backdrop-blur-sm">
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent opacity-50" />
-                    <FileCode className="w-4 h-4 text-blue-300 relative z-10" />
+            <div className={cn(
+              "flex flex-col border-b border-gray-200/60 transition-all overflow-hidden relative",
+              isFileListCollapsed ? '' : 'flex-1 min-h-0'
+            )}>
+              <Card className="flex items-center justify-between px-4 py-2.5 border-x-0 border-t-0 rounded-none flex-shrink-0 bg-white/60 backdrop-blur-sm shadow-none">
+                <div className="text-sm font-semibold text-gray-800 flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+                    <FileCode className="w-4 h-4 text-white" />
                   </div>
-                  <span className="bg-gradient-to-r from-white via-blue-200 to-blue-300 bg-clip-text text-transparent font-medium tracking-wide">文件列表</span>
-                </span>
-                <button
-                  onClick={() => setIsFileListCollapsed(!isFileListCollapsed)}
-                  className="px-2.5 py-1.5 text-xs text-surface-400 hover:text-blue-300 hover:bg-blue-500/20 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 border border-transparent hover:border-blue-500/30"
-                  title={isFileListCollapsed ? "展开文件列表" : "折叠文件列表"}
-                >
-                  {isFileListCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5 rotate-90" />}
-                </button>
-              </div>
+                  <span>文件列表</span>
+                  {projectFiles.length > 0 && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{projectFiles.length}</Badge>
+                  )}
+                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setIsFileListCollapsed(!isFileListCollapsed)}
+                      className="text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                    >
+                      <ChevronDown className={cn("w-4 h-4 transition-transform", !isFileListCollapsed && "rotate-180")} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{isFileListCollapsed ? "展开文件列表" : "折叠文件列表"}</TooltipContent>
+                </Tooltip>
+              </Card>
               {!isFileListCollapsed && (
-                <div className="flex-1 overflow-y-auto p-3 bg-gradient-to-b from-surface-900/30 via-surface-900/20 to-transparent">
+                <ScrollArea className="flex-1 p-3 bg-white/30">
                   {projectFiles.length === 0 ? (
                     <div className="px-2 py-8 text-center">
-                      <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-surface-800/50 flex items-center justify-center border border-surface-700/30">
-                        <FileCode className="w-6 h-6 text-surface-500 opacity-60" />
-                      </div>
-                      <div className="text-xs text-surface-400 font-medium">暂无文件</div>
+                      <Card className="w-12 h-12 mx-auto mb-3 flex items-center justify-center bg-gray-50 border-gray-200">
+                        <FileCode className="w-6 h-6 text-gray-400" />
+                      </Card>
+                      <div className="text-xs text-gray-500 font-medium">暂无文件</div>
                     </div>
                   ) : (
                     <div className="space-y-1">
@@ -1761,134 +1788,143 @@ export default function AICodeGenerator() {
                       ))}
                     </div>
                   )}
-                </div>
+                </ScrollArea>
               )}
             </div>
 
             {/* 3. Function 列表区域 */}
-            <div className={`flex flex-col transition-all overflow-hidden relative ${isApiListCollapsed ? '' : 'flex-1 min-h-0'}`}>
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/8 via-purple-500/3 to-transparent opacity-60 pointer-events-none" />
-              <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-500/15 via-purple-500/8 to-transparent border-b border-purple-500/20 flex-shrink-0 backdrop-blur-md relative z-10 shadow-[0_1px_0_0_rgba(168,85,247,0.1)]">
-                <span className="text-sm font-semibold text-white flex items-center gap-3">
-                  <div className="relative w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500/40 via-purple-500/25 to-purple-500/15 border border-purple-500/40 flex items-center justify-center shadow-lg shadow-purple-500/25 backdrop-blur-sm">
-                    <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/10 to-transparent opacity-50" />
-                    <Code2 className="w-4 h-4 text-purple-300 relative z-10" />
+            <div className={cn(
+              "flex flex-col transition-all overflow-hidden relative",
+              isApiListCollapsed ? '' : 'flex-1 min-h-0'
+            )}>
+              <Card className="flex items-center justify-between px-4 py-2.5 border-x-0 border-t-0 rounded-none flex-shrink-0 bg-white/60 backdrop-blur-sm shadow-none">
+                <div className="text-sm font-semibold text-gray-800 flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-md">
+                    <Code2 className="w-4 h-4 text-white" />
                   </div>
-                  <span className="bg-gradient-to-r from-white via-purple-200 to-purple-300 bg-clip-text text-transparent font-medium tracking-wide">API 列表</span>
-                </span>
-                <button
-                  onClick={() => setIsApiListCollapsed(!isApiListCollapsed)}
-                  className="px-2.5 py-1.5 text-xs text-surface-400 hover:text-purple-300 hover:bg-purple-500/20 rounded-lg transition-all duration-200 hover:scale-110 active:scale-95 border border-transparent hover:border-purple-500/30"
-                  title={isApiListCollapsed ? "展开 API 列表" : "折叠 API 列表"}
-                >
-                  {isApiListCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5 rotate-90" />}
-                </button>
-              </div>
+                  <span>API 列表</span>
+                  {functions.length > 0 && (
+                    <Badge variant="purple" className="text-[10px] px-1.5 py-0">{functions.length}</Badge>
+                  )}
+                </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setIsApiListCollapsed(!isApiListCollapsed)}
+                      className="text-gray-400 hover:text-purple-600 hover:bg-purple-50"
+                    >
+                      <ChevronDown className={cn("w-4 h-4 transition-transform", !isApiListCollapsed && "rotate-180")} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{isApiListCollapsed ? "展开 API 列表" : "折叠 API 列表"}</TooltipContent>
+                </Tooltip>
+              </Card>
               {!isApiListCollapsed && (
-                <div className="flex-1 overflow-y-auto p-3 bg-gradient-to-b from-surface-900/30 via-surface-900/20 to-transparent">
+                <ScrollArea className="flex-1 p-3 bg-white/30">
                   {functionsLoading ? (
                     <div className="px-2 py-8 text-center">
-                      <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-surface-800/50 flex items-center justify-center border border-surface-700/30">
-                        <Loader2 className="w-6 h-6 animate-spin text-nexo-400" />
-                      </div>
-                      <div className="text-xs text-surface-400 font-medium">加载中...</div>
+                      <Card className="w-12 h-12 mx-auto mb-3 flex items-center justify-center bg-gray-50 border-gray-200">
+                        <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
+                      </Card>
+                      <div className="text-xs text-gray-500 font-medium">加载中...</div>
                     </div>
                   ) : functions.length === 0 ? (
                     <div className="px-2 py-8 text-center">
-                      <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-surface-800/50 flex items-center justify-center border border-surface-700/30">
-                        <Code2 className="w-6 h-6 text-surface-500 opacity-60" />
-                      </div>
-                      <div className="text-xs text-surface-400 font-medium mb-3">暂无函数</div>
-                      <a
-                        href="/functions/new"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-nexo-400 hover:text-nexo-300 hover:bg-gradient-to-r hover:from-nexo-500/20 hover:to-nexo-500/10 rounded-lg border border-nexo-500/30 hover:border-nexo-500/50 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm hover:shadow-md hover:shadow-nexo-500/20"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        创建函数
-                      </a>
+                      <Card className="w-12 h-12 mx-auto mb-3 flex items-center justify-center bg-gray-50 border-gray-200">
+                        <Code2 className="w-6 h-6 text-gray-400" />
+                      </Card>
+                      <div className="text-xs text-gray-500 font-medium mb-3">暂无函数</div>
+                      <Button variant="purple" size="sm" asChild>
+                        <a href="/functions/new" target="_blank" rel="noopener noreferrer">
+                          <Plus className="w-3.5 h-3.5" />
+                          创建函数
+                        </a>
+                      </Button>
                     </div>
                   ) : (
                     <div className="space-y-2">
                       {functions.map((fn) => (
-                        <button
+                        <Card
                           key={fn.id}
                           onClick={() => {
                             setSelectedApi(fn)
                             setViewMode('api')
                             setActiveFile(null)
                           }}
-                          className={`w-full px-3 py-3 rounded-xl border transition-all duration-200 group text-left relative overflow-hidden backdrop-blur-sm ${
+                          className={cn(
+                            "w-full px-3 py-3 cursor-pointer transition-all duration-200 group text-left relative overflow-hidden",
                             selectedApi?.id === fn.id
-                              ? 'bg-gradient-to-r from-nexo-500/25 via-nexo-500/15 to-nexo-500/10 border-nexo-500/40 shadow-lg shadow-nexo-500/20'
-                              : 'bg-gradient-to-br from-surface-800/60 via-surface-800/40 to-surface-800/30 hover:from-surface-800/70 hover:via-surface-800/50 hover:to-surface-800/40 border-surface-700/40 hover:border-surface-600/60 hover:shadow-md'
-                          }`}
+                              ? 'bg-gradient-to-br from-purple-100 to-blue-50 border-purple-300 shadow-md'
+                              : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-purple-200 hover:shadow-md'
+                          )}
                         >
                           {selectedApi?.id === fn.id && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-nexo-400 via-nexo-500 to-nexo-600 rounded-r-full shadow-sm shadow-nexo-500/50" />
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-purple-400 via-purple-500 to-blue-500 rounded-r-full" />
                           )}
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                              <div className={`transition-transform duration-200 group-hover:scale-110 ${selectedApi?.id === fn.id ? 'scale-110' : ''}`}>
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                              <div className={cn(
+                                "transition-transform duration-200 group-hover:scale-110",
+                                selectedApi?.id === fn.id && 'scale-110'
+                              )}>
+                                <div className={cn(
+                                  "w-7 h-7 rounded-lg flex items-center justify-center transition-all",
                                   selectedApi?.id === fn.id 
-                                    ? 'bg-nexo-500/20 border border-nexo-500/30' 
-                                    : 'bg-surface-700/50 border border-surface-700/30 group-hover:bg-surface-700/70'
-                                } transition-all`}>
-                                  <Code2 className={`w-4 h-4 ${selectedApi?.id === fn.id ? 'text-nexo-300' : 'text-nexo-400/70 group-hover:text-nexo-400'} flex-shrink-0`} />
+                                    ? 'bg-gradient-to-br from-purple-500 to-purple-600' 
+                                    : 'bg-gray-100 group-hover:bg-purple-100'
+                                )}>
+                                  <Code2 className={cn(
+                                    "w-3.5 h-3.5 flex-shrink-0",
+                                    selectedApi?.id === fn.id ? 'text-white' : 'text-gray-500 group-hover:text-purple-600'
+                                  )} />
                                 </div>
                               </div>
-                              <span className={`font-semibold text-sm truncate transition-colors ${
-                                selectedApi?.id === fn.id ? 'text-nexo-200' : 'text-surface-200 group-hover:text-white'
-                              }`}>{fn.name}</span>
+                              <span className={cn(
+                                "font-semibold text-sm truncate transition-colors",
+                                selectedApi?.id === fn.id ? 'text-purple-800' : 'text-gray-800 group-hover:text-purple-700'
+                              )}>{fn.name}</span>
                             </div>
-                            <span className={`text-[10px] px-2 py-1 rounded-lg font-semibold flex-shrink-0 transition-all ${
-                              fn.status === 'active' 
-                                ? 'bg-nexo-500/25 text-nexo-200 border border-nexo-500/40 shadow-sm shadow-nexo-500/20' 
-                                : 'bg-surface-700/60 text-surface-400 border border-surface-700/40'
-                            }`}>
+                            <Badge variant={fn.status === 'active' ? 'success' : 'secondary'} className="text-[10px] px-1.5 py-0">
                               {fn.status === 'active' ? '运行中' : fn.status}
-                            </span>
+                            </Badge>
                           </div>
                           <div className="flex items-center gap-2.5">
-                            <code className="text-[10px] text-surface-300 font-mono bg-surface-900/60 px-2 py-1 rounded-md border border-surface-700/50 backdrop-blur-sm">{fn.route}</code>
-                            <div className="flex items-center gap-1.5">
+                            <code className="text-[10px] text-gray-600 font-mono bg-gray-100 px-2 py-1 rounded-md border border-gray-200">{fn.route}</code>
+                            <div className="flex items-center gap-1">
                               {fn.methods.slice(0, 3).map((method) => (
-                                <span
+                                <Badge
                                   key={method}
-                                  className={`text-[9px] px-1.5 py-0.5 rounded-md font-semibold ${
-                                    method === 'GET' ? 'bg-blue-500/25 text-blue-200 border border-blue-500/40 shadow-sm shadow-blue-500/20' :
-                                    method === 'POST' ? 'bg-green-500/25 text-green-200 border border-green-500/40 shadow-sm shadow-green-500/20' :
-                                    method === 'PUT' ? 'bg-yellow-500/25 text-yellow-200 border border-yellow-500/40 shadow-sm shadow-yellow-500/20' :
-                                    method === 'DELETE' ? 'bg-red-500/25 text-red-200 border border-red-500/40 shadow-sm shadow-red-500/20' :
-                                    'bg-surface-700/60 text-surface-400 border border-surface-700/40'
-                                  }`}
+                                  variant={
+                                    method === 'GET' ? 'get' :
+                                    method === 'POST' ? 'post' :
+                                    method === 'PUT' ? 'put' :
+                                    method === 'DELETE' ? 'delete' :
+                                    'secondary'
+                                  }
+                                  className="text-[9px] px-1 py-0"
                                 >
                                   {method}
-                                </span>
+                                </Badge>
                               ))}
                               {fn.methods.length > 3 && (
-                                <span className="text-[9px] text-surface-500 font-medium">+{fn.methods.length - 3}</span>
+                                <span className="text-[9px] text-gray-500 font-medium">+{fn.methods.length - 3}</span>
                               )}
                             </div>
                           </div>
-                        </button>
+                        </Card>
                       ))}
-                      <div className="px-3 py-3 mt-4 border-t border-surface-700/30">
-                        <a
-                          href="/functions/new"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-xs font-semibold text-nexo-400 hover:text-nexo-300 hover:bg-gradient-to-r hover:from-nexo-500/25 hover:via-nexo-500/15 hover:to-nexo-500/10 rounded-xl border border-nexo-500/30 hover:border-nexo-500/50 transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-sm hover:shadow-md hover:shadow-nexo-500/20 backdrop-blur-sm"
-                        >
+                      <Separator className="my-3" />
+                      <Button variant="outline" size="sm" className="w-full text-purple-600 hover:text-purple-700 hover:bg-purple-50 border-purple-200" asChild>
+                        <a href="/functions/new" target="_blank" rel="noopener noreferrer">
                           <Plus className="w-4 h-4" />
                           创建新函数
                         </a>
-                      </div>
+                      </Button>
                     </div>
                   )}
-                </div>
+                </ScrollArea>
               )}
             </div>
           </div>
@@ -1897,7 +1933,7 @@ export default function AICodeGenerator() {
       {/* 拖拽分隔条 */}
       <div
         onMouseDown={handleResizeStart}
-        className={`w-1 cursor-col-resize bg-surface-700/40 hover:bg-nexo-500/50 active:bg-nexo-500 transition-all duration-200 ${isResizing ? 'bg-nexo-500 w-1.5' : ''}`}
+        className={`w-1 cursor-col-resize bg-gray-200 hover:bg-blue-400 active:bg-blue-500 transition-all duration-200 ${isResizing ? 'bg-blue-500 w-1.5' : ''}`}
         title="拖拽调整宽度"
       />
 
@@ -2256,5 +2292,6 @@ export default function AICodeGenerator() {
         </div>
       </div>
     </div>
+    </TooltipProvider>
   )
 }
